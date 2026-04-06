@@ -5,17 +5,17 @@ public class MainMenuController : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     [SerializeField] private GameObject button;
 
-    private void Play()
+    public void Play()
     {
         Debug.Log("Play button clicked!");
     }
 
-    private void Options()
+    public void Options()
     {
         Debug.Log("Options button clicked!");
     }
 
-    private void Quit()
+    public void Quit()
     {
         Debug.Log("Quit button clicked!");
     }
