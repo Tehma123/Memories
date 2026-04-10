@@ -9,11 +9,13 @@ public class PlayerInteraction : MonoBehaviour
 
     private readonly List<IInteractable> _targetsInRange = new List<IInteractable>();
     private bool _isInteractionEnabled = true;
+    private bool _wasInteractPressed;
 
     public void Initialize()
     {
         _targetsInRange.Clear();
         _isInteractionEnabled = true;
+        _wasInteractPressed = false;
     }
 
     private void Awake()
@@ -23,10 +25,25 @@ public class PlayerInteraction : MonoBehaviour
 
     public void OnInteract(InputValue inputValue)
     {
-        if (!_isInteractionEnabled || inputValue == null || !inputValue.isPressed)
+        if (!_isInteractionEnabled || inputValue == null)
+        {
+            _wasInteractPressed = false;
+            return;
+        }
+
+        bool isPressed = inputValue.isPressed;
+        if (!isPressed)
+        {
+            _wasInteractPressed = false;
+            return;
+        }
+
+        if (_wasInteractPressed)
         {
             return;
         }
+
+        _wasInteractPressed = true;
 
         TryInteract();
     }
@@ -38,6 +55,7 @@ public class PlayerInteraction : MonoBehaviour
         if (!_isInteractionEnabled)
         {
             _targetsInRange.Clear();
+            _wasInteractPressed = false;
         }
     }
 

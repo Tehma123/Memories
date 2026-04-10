@@ -1,5 +1,7 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class DialogueUIManager : MonoBehaviour
@@ -14,12 +16,24 @@ public class DialogueUIManager : MonoBehaviour
     [Header("Behavior")]
     [SerializeField] private bool hidePanelOnStart = true;
     [SerializeField] private bool autoCreateRuntimeUIIfMissing = true;
+    [SerializeField] private Key nextLineKey = Key.F;
+    [SerializeField] private float sentencePunctuationPause = 0.08f;
+    [SerializeField] private float commaPunctuationPause = 0.04f;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource typewriterAudioSource;
+    [SerializeField] private AudioClip typewriterTickClip;
+    [SerializeField] [Range(0f, 1f)] private float typewriterTickVolume = 0.35f;
 
     private bool _subscribed;
     private bool _hideWithCanvasGroup;
     private CanvasGroup _panelCanvasGroup;
     private bool _runtimeUICreated;
     private bool _missingUIWarningLogged;
+    private Coroutine _typewriterCoroutine;
+    private string _currentLineText = string.Empty;
+    private bool _isTypewriterRunning;
+    private bool _waitForAdvanceKeyRelease;
 
     private void Awake()
     {
@@ -44,28 +58,34 @@ public class DialogueUIManager : MonoBehaviour
 
     private void OnDisable()
     {
+        StopTypewriterAnimation(false);
         Unsubscribe();
     }
 
     private void Update()
     {
-        if (_subscribed)
+        if (!_subscribed)
         {
-            return;
+            ResolveReferences();
+            EnsureUIBindings();
+            Subscribe();
+            if (_subscribed)
+            {
+                SyncWithDialogueState();
+            }
         }
 
-        ResolveReferences();
-        EnsureUIBindings();
-        Subscribe();
-        if (_subscribed)
-        {
-            SyncWithDialogueState();
-        }
+        HandleAdvanceInput();
     }
 
     public void OnNextPressed()
     {
         ResolveReferences();
+        if (TryCompleteCurrentLine())
+        {
+            return;
+        }
+
         dialogueManager?.ShowNextLine();
     }
 
@@ -78,6 +98,7 @@ public class DialogueUIManager : MonoBehaviour
     private void HandleDialogueStarted(DialogueData _)
     {
         SetPanelVisible(true);
+        _waitForAdvanceKeyRelease = IsAdvanceKeyPressed();
     }
 
     private void HandleDialogueLineShown(DialogueNode node)
@@ -96,14 +117,13 @@ public class DialogueUIManager : MonoBehaviour
             speakerText.text = string.IsNullOrWhiteSpace(node.speakerName) ? "Narrator" : node.speakerName;
         }
 
-        if (dialogueText != null)
-        {
-            dialogueText.text = node.textContent;
-        }
+        StartTypewriterAnimation(node.textContent);
     }
 
     private void HandleDialogueEnded(DialogueData _)
     {
+        StopTypewriterAnimation(false);
+        _waitForAdvanceKeyRelease = false;
         ClearText();
         SetPanelVisible(false);
     }
@@ -113,6 +133,18 @@ public class DialogueUIManager : MonoBehaviour
         if (dialogueManager == null)
         {
             dialogueManager = FindFirstObjectByType<DialogueManager>();
+        }
+
+        if (typewriterTickClip != null && typewriterAudioSource == null)
+        {
+            typewriterAudioSource = GetComponent<AudioSource>();
+            if (typewriterAudioSource == null)
+            {
+                typewriterAudioSource = gameObject.AddComponent<AudioSource>();
+                typewriterAudioSource.playOnAwake = false;
+                typewriterAudioSource.loop = false;
+                typewriterAudioSource.spatialBlend = 0f;
+            }
         }
     }
 
@@ -315,6 +347,9 @@ public class DialogueUIManager : MonoBehaviour
 
     private void ClearText()
     {
+        StopTypewriterAnimation(false);
+        _currentLineText = string.Empty;
+
         if (speakerText != null)
         {
             speakerText.text = string.Empty;
@@ -323,6 +358,184 @@ public class DialogueUIManager : MonoBehaviour
         if (dialogueText != null)
         {
             dialogueText.text = string.Empty;
+            dialogueText.maxVisibleCharacters = int.MaxValue;
         }
+    }
+
+    private void HandleAdvanceInput()
+    {
+        if (dialogueManager == null || !dialogueManager.IsDialogueActive)
+        {
+            return;
+        }
+
+        if (Keyboard.current == null)
+        {
+            return;
+        }
+
+        var keyControl = Keyboard.current[nextLineKey];
+        if (_waitForAdvanceKeyRelease)
+        {
+            if (keyControl != null && !keyControl.isPressed)
+            {
+                _waitForAdvanceKeyRelease = false;
+            }
+
+            return;
+        }
+
+        if (keyControl != null && keyControl.wasPressedThisFrame)
+        {
+            OnNextPressed();
+        }
+    }
+
+    private bool IsAdvanceKeyPressed()
+    {
+        if (Keyboard.current == null)
+        {
+            return false;
+        }
+
+        var keyControl = Keyboard.current[nextLineKey];
+        return keyControl != null && keyControl.isPressed;
+    }
+
+    private bool TryCompleteCurrentLine()
+    {
+        if (!_isTypewriterRunning)
+        {
+            return false;
+        }
+
+        StopTypewriterAnimation(true);
+        return true;
+    }
+
+    private void StartTypewriterAnimation(string lineText)
+    {
+        _currentLineText = lineText ?? string.Empty;
+        StopTypewriterAnimation(false);
+
+        if (dialogueText == null)
+        {
+            return;
+        }
+
+        _isTypewriterRunning = true;
+        _typewriterCoroutine = StartCoroutine(TypewriterCoroutine(_currentLineText));
+    }
+
+    private void StopTypewriterAnimation(bool showCurrentLine)
+    {
+        if (_typewriterCoroutine != null)
+        {
+            StopCoroutine(_typewriterCoroutine);
+            _typewriterCoroutine = null;
+        }
+
+        _isTypewriterRunning = false;
+
+        if (dialogueText == null)
+        {
+            return;
+        }
+
+        if (showCurrentLine)
+        {
+            dialogueText.text = _currentLineText;
+        }
+
+        dialogueText.maxVisibleCharacters = int.MaxValue;
+    }
+
+    private IEnumerator TypewriterCoroutine(string fullText)
+    {
+        if (dialogueText == null)
+        {
+            _isTypewriterRunning = false;
+            _typewriterCoroutine = null;
+            yield break;
+        }
+
+        float charsPerSecond = dialogueManager != null ? dialogueManager.TypewriterSpeed : 40f;
+        if (charsPerSecond <= 0f)
+        {
+            dialogueText.text = fullText;
+            dialogueText.maxVisibleCharacters = int.MaxValue;
+            _isTypewriterRunning = false;
+            _typewriterCoroutine = null;
+            yield break;
+        }
+
+        dialogueText.text = fullText;
+        dialogueText.maxVisibleCharacters = 0;
+        dialogueText.ForceMeshUpdate();
+
+        int visibleCharacterCount = dialogueText.textInfo.characterCount;
+        if (visibleCharacterCount <= 0)
+        {
+            _isTypewriterRunning = false;
+            _typewriterCoroutine = null;
+            yield break;
+        }
+
+        float baseCharacterDelay = 1f / charsPerSecond;
+
+        for (int i = 0; i < visibleCharacterCount; i++)
+        {
+            dialogueText.maxVisibleCharacters = i + 1;
+
+            char visibleCharacter = dialogueText.textInfo.characterInfo[i].character;
+            PlayTypewriterTick(visibleCharacter);
+
+            float delay = GetCharacterDelay(visibleCharacter, baseCharacterDelay);
+            if (delay > 0f)
+            {
+                yield return new WaitForSecondsRealtime(delay);
+            }
+            else
+            {
+                yield return null;
+            }
+        }
+
+        dialogueText.maxVisibleCharacters = int.MaxValue;
+        _isTypewriterRunning = false;
+        _typewriterCoroutine = null;
+    }
+
+    private float GetCharacterDelay(char visibleCharacter, float baseCharacterDelay)
+    {
+        float delay = baseCharacterDelay;
+
+        if (visibleCharacter == ',')
+        {
+            delay += Mathf.Max(0f, commaPunctuationPause);
+            return delay;
+        }
+
+        if (visibleCharacter == '.' || visibleCharacter == '!' || visibleCharacter == '?')
+        {
+            delay += Mathf.Max(0f, sentencePunctuationPause);
+        }
+
+        return delay;
+    }
+
+    private void PlayTypewriterTick(char visibleCharacter)
+    {
+        if (char.IsWhiteSpace(visibleCharacter))
+        {
+            return;
+        }
+
+        if (typewriterAudioSource == null || typewriterTickClip == null)
+        {
+            return;
+        }
+
+        typewriterAudioSource.PlayOneShot(typewriterTickClip, typewriterTickVolume);
     }
 }

@@ -6,6 +6,8 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody2D rb;
     [SerializeField] private float speed = 2f;
     private Vector2 movement;
+    private bool _isMovementEnabled = true;
+    private bool _wasInteractPressed;
     public CameraSmoothFollow cameraScript;
     private IInteractable currentTarget;
     private void Start()
@@ -15,6 +17,16 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (!_isMovementEnabled)
+        {
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector2.zero;
+            }
+
+            return;
+        }
+
         rb.linearVelocity = movement * speed; 
 
         if (movement.x > 0f)
@@ -29,16 +41,58 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnMove(InputValue inputValue)
     {
+        if (!_isMovementEnabled)
+        {
+            movement = Vector2.zero;
+            return;
+        }
+
         if (cameraScript != null)
         {
             cameraScript.UpdateCameraDirection(inputValue.Get<Vector2>().x);
         }
         movement = inputValue.Get<Vector2>();
     }
+
+    public void SetMovementEnabled(bool isEnabled)
+    {
+        _isMovementEnabled = isEnabled;
+
+        if (_isMovementEnabled)
+        {
+            return;
+        }
+
+        movement = Vector2.zero;
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+        }
+    }
+
     public void OnInteract(InputValue value)
     {
-        Debug.Log("OnInteract called. isPressed=" + value.isPressed);
-        if (value.isPressed && currentTarget != null)
+        if (!_isMovementEnabled || value == null)
+        {
+            _wasInteractPressed = false;
+            return;
+        }
+
+        bool isPressed = value.isPressed;
+        if (!isPressed)
+        {
+            _wasInteractPressed = false;
+            return;
+        }
+
+        if (_wasInteractPressed)
+        {
+            return;
+        }
+
+        _wasInteractPressed = true;
+
+        if (currentTarget != null)
         {
             // Chỉ cần gọi Interact(), nó tự chạy code của Shop hoặc Fragment tùy đối tượng
             currentTarget.Interact();

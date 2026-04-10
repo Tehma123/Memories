@@ -10,6 +10,7 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private bool pausePlayerDuringDialogue = true;
     [SerializeField] private float typewriterSpeed = 40f;
     [SerializeField] private PlayerController playerController;
+    [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerInteraction playerInteraction;
     [SerializeField] private StateManager stateManager;
     [SerializeField] private MemoryManager memoryManager;
@@ -42,6 +43,11 @@ public class DialogueManager : MonoBehaviour
         if (playerController == null)
         {
             playerController = FindFirstObjectByType<PlayerController>();
+        }
+
+        if (playerMovement == null)
+        {
+            playerMovement = FindFirstObjectByType<PlayerMovement>();
         }
 
         if (playerInteraction == null)
@@ -233,6 +239,7 @@ public class DialogueManager : MonoBehaviour
         }
 
         playerController?.SetMovementEnabled(isEnabled);
+        playerMovement?.SetMovementEnabled(isEnabled);
         playerInteraction?.SetInteractionEnabled(isEnabled);
     }
 }
