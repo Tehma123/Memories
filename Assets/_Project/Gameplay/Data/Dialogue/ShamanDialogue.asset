@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07354b2836b804348b3dd06448464c2c, type: 3}
+  m_Name: ShamanDialogue
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  dialogueID: 
+  startNodeID: 0
+  nodes:
+  - nodeID: 0
+    speakerName: ???
+    textContent: Such a bad ghost...
+    triggerEvent: 0
+    eventParam: 
+    portraitId: 
+    defaultNextNodeID: 1
+  - nodeID: 1
+    speakerName: You
+    textContent: What do you mean?
+    triggerEvent: 0
+    eventParam: 
+    portraitId: 
+    defaultNextNodeID: 2
+  - nodeID: 3
+    speakerName: ???
+    textContent: Feeling lost?
+    triggerEvent: 0
+    eventParam: 
+    portraitId: 
+    defaultNextNodeID: 3
+  - nodeID: 3
+    speakerName: ???
+    textContent: Feeling lost?
+    triggerEvent: 0
+    eventParam: 
+    portraitId: 
+    defaultNextNodeID: 4
+  - nodeID: 4
+    speakerName: ???
+    textContent: Take these cards with you, you will need it
+    triggerEvent: 3
+    eventParam: 
+    portraitId: 
+    defaultNextNodeID: -1

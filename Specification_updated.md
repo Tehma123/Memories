@@ -105,13 +105,15 @@ Mỗi thẻ là một `ScriptableObject` (`CardData`) chứa: `CardType`, `Cost`
 ## Dialogue System (NPC <-> Player)
 
 - **Overview:** Hệ thống dialogue xử lý hội thoại giữa NPC và người chơi trong exploration và các đoạn mid-battle dialogue.
-- **DialogueData (SO):** mỗi đoạn hội thoại là một ScriptableObject chứa: list of `DialogueNode` (speaker, text, portrait, audio), choices, flags, and nextNode mapping.
+- **DialogueData (SO):** mỗi đoạn hội thoại là một ScriptableObject chứa: list of `DialogueNode` (speaker, text, portrait), trigger event, flags, và `defaultNextNodeID` để đi tuyến tính.
 - **DialogueManager responsibilities:**
   - Queue và hiển thị lines với typewriter effect.
-  - Handle branching choices, set/check flags, trigger game events (unlock memory, start battle, give item).
+  - Chuyển node theo `defaultNextNodeID`, set/check flags, trigger game events (unlock memory, start battle, give item).
   - Pause player movement/input while dialogue active; resume after.
   - Integrate with `StateManager` / `MemoryManager` to modify states or reveal fragments.
-- **UI:** nameplate, portrait, text box, choice buttons, skip/next controls, optional subtitles/voice.
+- **DialogueUIManager responsibilities:** subscribe `OnDialogueStarted` / `OnDialogueLineShown` / `OnDialogueEnded`, cập nhật speaker + text, xử lý Next/Close button.
+- **PortraitManager responsibilities:** quản lý mapping `portraitId -> Sprite`, fallback portrait, và apply ảnh vào UI.
+- **UI:** nameplate, portrait, text box, skip/next controls, optional subtitles.
 - **Integration:** NPC prefabs implement `IInteractable` và reference a `DialogueData` SO. When `Interact()` called, the `DialogueManager` runs the dialogue.
 
 ```csharp
@@ -247,10 +249,7 @@ public interface IInteractable { void Interact(); }
       "met_bartender": true,
       "revealed_door_woman": false
     },
-    "seenVignettes": ["vignette_sun", "vignette_child_story"],
-    "choiceHistory": [
-      { "dialogueId": "dlg_shop_intro", "nodeId": 12, "choiceId": "ask_name" }
-    ]
+    "seenVignettes": ["vignette_sun", "vignette_child_story"]
   },
 
   "battleSnapshot": {
@@ -438,8 +437,6 @@ public class DialogueNode
     public DialogueEvent triggerEvent; // Event bắn khi line kết thúc
     public string eventParam;        // Ví dụ: battleId/flagKey/vignetteId
     public string portraitId;        // Key portrait
-    public string audioCueId;        // Key voice/sfx
-    public List<DialogueChoice> choices;
     public int defaultNextNodeID;
 }
 ```
@@ -465,7 +462,7 @@ public enum GameState
   - Khoá: mọi input combat/card.
 
 - **Dialogue State**
-  - Cho phép: `F` để next line/confirm choice (hoặc key tương đương UI).
+  - Cho phép: `F` để next line (hoặc key tương đương UI).
   - Khoá: movement, card input, world interaction khác.
 
 - **Battle State**

@@ -1,5 +1,5 @@
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 public class MainMenuController : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -7,7 +7,7 @@ public class MainMenuController : MonoBehaviour
 
     public void Play()
     {
-        Debug.Log("Play button clicked!");
+        SceneManager.LoadScene("ExplorationAct0");
     }
 
     public void Options()
@@ -17,6 +17,6 @@ public class MainMenuController : MonoBehaviour
 
     public void Quit()
     {
-        Debug.Log("Quit button clicked!");
+        Application.Quit();
     }
 }
