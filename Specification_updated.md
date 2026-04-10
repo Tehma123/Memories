@@ -59,14 +59,14 @@
 
 ## Hệ thống thẻ (Cards)
 
-Mỗi thẻ là một `ScriptableObject` (`CardData`) chứa: `CardType`, `Cost%` (ký ức), `Effect`, `FlavorText`, `Sprite1bit`.
+Mỗi thẻ là một `ScriptableObject` (`CardData`) chứa: `CardType`, `Cost` (ký ức), `Effect`, `FlavorText`, `Sprite1bit`.
 
 - Thẻ mẫu:
-  - **ĐAU THƯƠNG (Pain)** — Type: Attack; Cost: 15%; Effect: 30 DMG (x2 nếu target có "U buồn"); Art: giọt lệ + kiếm gãy.
-  - **HỤT HẪNG (Void)** — Type: Control; Cost: 10%; Effect: Enemy "Lost" (skip next turn); Player: no draw next turn.
-  - **VUI VẺ (Euphoria)** — Type: Support; Cost: 0% (special); Effect: Restore 20% Memory; Exile after use.
-  - **GIẬN DỮ (Wrath)** — Type: Skill; Cost: 25%; Effect: 10 AoE DMG; Buff +5 attack to cards in hand.
-  - **HOÀI NIỆM (Nostalgia)** — Type: Utility; Cost: 5%; Effect: Return 1 card from Discard to hand.
+  - **ĐAU THƯƠNG (Pain)** — Type: Attack; Cost: 15; Effect: 30 DMG (x2 nếu target có "U buồn"); Art: giọt lệ + kiếm gãy.
+  - **HỤT HẪNG (Void)** — Type: Control; Cost: 10; Effect: Enemy "Lost" (skip next turn); Player: no draw next turn.
+  - **VUI VẺ (Euphoria)** — Type: Support; Cost: 0 (special); Effect: Restore 20 Memory; Exile after use.
+  - **GIẬN DỮ (Wrath)** — Type: Skill; Cost: 25; Effect: 10 AoE DMG; Buff +5 attack to cards in hand.
+  - **HOÀI NIỆM (Nostalgia)** — Type: Utility; Cost: 5; Effect: Return 1 card from Discard to hand.
 
 ---
 
@@ -81,7 +81,7 @@ Mỗi thẻ là một `ScriptableObject` (`CardData`) chứa: `CardType`, `Cost%
 
 ## Core mechanics
 
-- **Memory (%)**: Tài nguyên chính — HP & Mana. 0% = Game Over.
+- **Memory ()**: Tài nguyên chính — HP & Mana. 0 = Game Over.
 - **Action-Driven States**: Dùng thẻ áp ngay trạng thái (buff/debuff, skip draw).
 - **DeckManager**: Draw, Discard, Exile logic.
 - **StateManager**: Quản lý trạng thái kéo dài.
@@ -158,7 +158,7 @@ public interface IInteractable { void Interact(); }
 
 - `PlayerController` (movement, input)
 - `PlayerInteraction` (detect/interact IInteractable)
-- `MemoryManager` (manage %Memory, GameOver)
+- `MemoryManager` (manage Memory, GameOver)
 - `BattleManager` (turn flow, execute card effects)
 - `DeckManager` (draw/discard/exile)
 - `StateManager` (buff/debuff lifecycle)
@@ -188,7 +188,7 @@ public interface IInteractable { void Interact(); }
 - **Workflows (WF):**
   - **WF-01 — Encounter initialization (BattleManager.StartEncounter):** tạo `BattleContext` (deck snapshot, enemies, RNG seed), load UI, `DeckManager.DrawInitialHand()`, apply initial states.
   - **WF-02 — Turn loop (StartTurn → PlayerActionPhase → ResolvePhase → EnemyTurn → EndTurn):**
-    - `StartTurn()`: fire `OnTurnStart`, apply start-of-turn effects, `DeckManager.DrawForTurn()`.
+    - `StartTurn()`: fire `OnTurnStarted`, apply start-of-turn effects, `DeckManager.DrawForTurn()`.
     - `PlayerActionPhase()`: enable input; on `PlayCard` tạo `PlayCardAction` và `ActionQueue.Enqueue()`; validate costs on select + confirm.
     - `ResolvePhase()`: `ActionQueue.ProcessNext()` sequentially; mỗi `IBattleAction.Resolve(ctx)` post events tới `EventBus`.
     - `EnemyTurn()`: AI tạo `IBattleAction` cho enemy; resolve bằng cùng pipeline.
@@ -198,6 +198,376 @@ public interface IInteractable { void Interact(); }
   - **WF-05 — Event system:** `EventBus` với events typed (`DamageEvent`, `HealEvent`, `StateAppliedEvent`, `CardPlayedEvent`); subscribers gồm `UI`, `StateManager`, `DeckManager`, `Log`.
   - **WF-06 — Coroutines & animations:** mỗi `Resolve()` yield để cho animations; BattleManager chờ coroutine hoàn thành; hỗ trợ fast-forward/skip.
   - **WF-07 — Failure & recoverability:** catch exceptions, log `BattleContext` snapshot, show error modal, allow resume hoặc abort; persist minimal state mỗi turn để restore.
+
+---
+
+## Schema cho Save System (JSON)
+
+- **Mục tiêu:** Chuẩn hoá format save để tương thích lâu dài (versioning), dễ debug, và đủ dữ liệu để restore exploration hoặc battle.
+- **Định dạng:** JSON text (`.sav.json`) theo schema version.
+- **Quy ước:**
+  - `schemaVersion`: tăng khi thay đổi cấu trúc dữ liệu.
+  - `gameVersion`: version build game để hỗ trợ migration.
+  - `cardID`, `enemyID`, `sceneName`, `checkpointID`: dùng ID/string ổn định, không phụ thuộc index runtime.
+  - `costPercentage` của card được tính theo **MaxMemory** để chi phí nhất quán.
+
+```json
+{
+  "schemaVersion": 1,
+  "saveId": "slot-01",
+  "gameVersion": "0.1.0",
+  "createdAtUtc": "2026-04-10T12:00:00Z",
+  "updatedAtUtc": "2026-04-10T12:34:56Z",
+
+  "gameState": "Exploration",
+  "act": 1,
+  "sceneName": "ExplorationScene_Act1",
+  "checkpointId": "act1_after_battle_02",
+
+  "player": {
+    "memoryCurrent": 68,
+    "memoryMax": 100,
+    "position": { "x": 12.4, "y": -3.1 },
+    "facing": "Right",
+    "statusEffects": [
+      { "statusId": "WrathBuff", "stacks": 1, "remainingTurns": 2 }
+    ]
+  },
+
+  "deck": {
+    "drawPile": ["CARD_PAIN", "CARD_VOID"],
+    "hand": ["CARD_NOSTALGIA", "CARD_WRATH"],
+    "discardPile": ["CARD_PAIN"],
+    "exilePile": ["CARD_EUPHORIA"]
+  },
+
+  "narrative": {
+    "unlockedMemoryFragments": ["frag_rain_01", "frag_birthday_box"],
+    "dialogueFlags": {
+      "met_bartender": true,
+      "revealed_door_woman": false
+    },
+    "seenVignettes": ["vignette_sun", "vignette_child_story"],
+    "choiceHistory": [
+      { "dialogueId": "dlg_shop_intro", "nodeId": 12, "choiceId": "ask_name" }
+    ]
+  },
+
+  "battleSnapshot": {
+    "isInBattle": false,
+    "turnNumber": 0,
+    "rngSeed": 0,
+    "enemies": []
+  },
+
+  "meta": {
+    "playTimeSeconds": 4520,
+    "lastManualSaveUtc": "2026-04-10T12:30:00Z",
+    "lastAutoSaveUtc": "2026-04-10T12:34:56Z"
+  }
+}
+```
+
+- **Save triggers đề xuất:**
+  - Auto-save khi chuyển act, kết thúc battle, hoàn tất vignette quan trọng.
+  - Manual save tại safe points trong exploration.
+  - Không cho save giữa animation resolve; chỉ save tại điểm state ổn định.
+
+---
+
+## Event Bus — Định nghĩa chi tiết Events
+
+- **Quy tắc chung:**
+  - Event name dùng thì quá khứ hoặc completed action (`OnCardPlayed`, `OnDamageDealt`).
+  - Event payload phải đủ dữ liệu cho UI + log + analytics, không buộc subscriber truy vấn ngược runtime state.
+  - Event dispatch theo thứ tự resolve trong `ActionQueue` để giữ determinism.
+
+### Combat Events
+
+1. **OnCardPlayed**
+   - **Khi phát sinh:** ngay sau khi cost hợp lệ, card được confirm play và đưa vào resolve pipeline.
+   - **Publisher:** `BattleManager` / `ActionQueue`.
+   - **Payload:**
+     - `string battleId`
+     - `int turnNumber`
+     - `string actorId`
+     - `string cardId`
+     - `int memoryCostPaid`
+     - `List<string> targetIds`
+     - `bool isReaction`
+
+2. **OnDamageDealt**
+   - **Khi phát sinh:** mỗi lần damage final được commit lên target.
+   - **Publisher:** `DamageResolver`.
+   - **Payload:**
+     - `string battleId`
+     - `int turnNumber`
+     - `string sourceId`
+     - `string targetId`
+     - `int baseDamage`
+     - `float totalMultiplier`
+     - `int finalDamage`
+     - `bool isCritical`
+     - `string damageType`
+
+3. **OnMemoryChanged**
+   - **Khi phát sinh:** mọi thay đổi Memory (cost card, heal, self-damage, scripted event).
+   - **Publisher:** `MemoryManager`.
+   - **Payload:**
+     - `string ownerId`
+     - `int oldValue`
+     - `int newValue`
+     - `int delta`
+     - `string reason` (`CardCost`, `Damage`, `Heal`, `Scripted`)
+     - `string sourceId`
+
+4. **OnTurnStarted**
+   - **Khi phát sinh:** bắt đầu turn của player hoặc enemy, trước draw/start-of-turn effects.
+   - **Publisher:** `BattleManager`.
+   - **Payload:**
+     - `string battleId`
+     - `int turnNumber`
+     - `string side` (`Player` hoặc `Enemy`)
+     - `int memoryAtTurnStart`
+
+### Narrative Events
+
+1. **OnDialogueStarted**
+   - **Khi phát sinh:** `DialogueManager.StartDialogue()` được gọi thành công.
+   - **Payload:** `string dialogueId`, `int startNodeId`, `string npcId`, `string sceneName`.
+
+2. **OnDialogueEnded**
+   - **Khi phát sinh:** dialogue kết thúc tự nhiên hoặc do skip.
+   - **Payload:** `string dialogueId`, `int endNodeId`, `string endReason` (`Completed`, `Skipped`, `Interrupted`), `Dictionary<string, bool> updatedFlags`.
+
+3. **OnVignetteTriggered**
+   - **Khi phát sinh:** người chơi tương tác paper/note và vignette bắt đầu hiển thị.
+   - **Payload:** `string vignetteId`, `string vignetteType`, `bool replayable`, `string sourceInteractableId`.
+
+### System Events
+
+1. **OnGameStateChanged**
+   - **Khi phát sinh:** state machine chuyển giữa `Exploration`, `Dialogue`, `Battle`, `Vignette`.
+   - **Payload:** `string previousState`, `string newState`, `string reason`, `string contextId`.
+
+2. **OnSaveTriggered**
+   - **Khi phát sinh:** bắt đầu tiến trình save (manual/auto/checkpoint).
+   - **Payload:** `string saveId`, `string triggerType`, `string gameState`, `string checkpointId`, `string requestedBy`.
+
+---
+
+## ScriptableObjects — Cấu trúc chi tiết (Field Level)
+
+### CardData SO
+
+```csharp
+public enum CardType
+{
+    Attack,
+    Support,
+    Skill,
+    Control,
+    Utility
+}
+
+public enum EffectType
+{
+    Damage,
+    HealMemory,
+    Buff,
+    Debuff,
+    ApplyStatus,
+    Draw,
+    Discard,
+    Exile,
+    ReturnFromDiscard
+}
+
+[System.Serializable]
+public class EffectData
+{
+    public EffectType effectType;
+    public int flatValue;
+    public float multiplier;
+    public string statusId;
+    public int durationTurns;
+    public TargetScope targetScope; // Single, AllEnemies, Self, Ally
+    public string conditionKey;      // Ví dụ: "TargetHas_UBuon"
+}
+
+[CreateAssetMenu(menuName = "Memories/Data/CardData")]
+public class CardData : ScriptableObject
+{
+    public string cardID;            // ID duy nhất để save/load và truy vấn
+    public string displayName;       // Tên hiển thị trên UI
+    public CardType type;            // Attack, Support, ...
+    [Range(0, 100)]
+    public int costPercentage;       // % Memory tiêu tốn theo MaxMemory
+    public List<EffectData> effects; // Danh sách effect resolver sẽ chạy theo thứ tự
+    [TextArea]
+    public string flavorText;        // Đoạn dẫn chuyện 1-bit
+    public Sprite sprite1Bit;        // Minh hoạ card
+}
+```
+
+- **Quy tắc cost:**
+  - `memoryCost = ceil(playerMaxMemory * costPercentage / 100)`
+  - Nếu `memoryCurrent < memoryCost` -> block play, fire feedback UI.
+
+### DialogueNode (trong DialogueData SO)
+
+```csharp
+public enum DialogueEvent
+{
+    None,
+    StartBattle,
+    UnlockMemoryFragment,
+    GiveCard,
+    SetFlag,
+    TriggerVignette,
+    LoadScene
+}
+
+[System.Serializable]
+public class DialogueNode
+{
+    public int nodeID;               // Định danh node
+    public string speakerName;       // Tên speaker
+    [TextArea]
+    public string textContent;       // Nội dung thoại
+    public DialogueEvent triggerEvent; // Event bắn khi line kết thúc
+    public string eventParam;        // Ví dụ: battleId/flagKey/vignetteId
+    public string portraitId;        // Key portrait
+    public string audioCueId;        // Key voice/sfx
+    public List<DialogueChoice> choices;
+    public int defaultNextNodeID;
+}
+```
+
+- `triggerEvent` chạy tại cuối node hoặc trước chuyển node kế tiếp (configurable).
+
+---
+
+## State Machine — Logic trạng thái Game
+
+```csharp
+public enum GameState
+{
+    Exploration,
+    Dialogue,
+    Battle,
+    Vignette
+}
+```
+
+- **Exploration State**
+  - Cho phép: di chuyển (`A/D`), tương tác (`F`), trigger encounter.
+  - Khoá: mọi input combat/card.
+
+- **Dialogue State**
+  - Cho phép: `F` để next line/confirm choice (hoặc key tương đương UI).
+  - Khoá: movement, card input, world interaction khác.
+
+- **Battle State**
+  - Cho phép: chọn card, chọn target, end turn, reaction theo rule.
+  - Khoá: movement exploration và interact world object.
+
+- **Vignette State**
+  - Cho phép: next/skip/close vignette overlay.
+  - Khoá: toàn bộ input world + battle.
+
+- **State transitions chuẩn:**
+  - `Exploration -> Dialogue` (interact NPC)
+  - `Exploration -> Battle` (encounter/script)
+  - `Exploration -> Vignette` (interact paper/note)
+  - `Dialogue -> Exploration` (dialogue end)
+  - `Dialogue -> Battle` (`DialogueEvent.StartBattle`)
+  - `Vignette -> Exploration` (close overlay)
+  - `Battle -> Exploration` (battle end)
+
+- **Triển khai khuyến nghị:**
+  - `GameStateMachine` trung tâm, mọi manager đăng ký callback `OnEnter/OnExit`.
+  - Fire `OnGameStateChanged` mỗi transition để UI, input layer, audio layer sync.
+  - Có thể dùng state stack cho modal (`Exploration` base + push `Dialogue`/`Vignette`).
+
+---
+
+## Namespace & Project Organization
+
+- **Namespace quy chuẩn:**
+  - `Memories.Core`: `GameManager`, `GameStateMachine`, `StateManager`, `MemoryManager`.
+  - `Memories.Combat`: `DeckManager`, `BattleManager`, `CardResolver`, `ActionQueue`.
+  - `Memories.Narrative`: `DialogueManager`, `VignetteManager`, narrative triggers.
+  - `Memories.Data`: ScriptableObjects, DTO/save wrappers, enums dùng chung.
+
+- **Cấu trúc thư mục đề xuất (khớp layout hiện tại):**
+
+```text
+Assets/_Project/Gameplay/Scripts/
+  Core/            -> namespace Memories.Core
+  Combat/          -> namespace Memories.Combat
+  Narrative/       -> namespace Memories.Narrative
+  Data/            -> namespace Memories.Data
+  Interfaces/      -> namespace Memories.Core.Interfaces hoặc Memories.Shared
+```
+
+- **Quy tắc đặt tên:**
+  - Class manager: hậu tố `Manager`.
+  - SO data: hậu tố `Data`.
+  - Event payload: hậu tố `Event`.
+  - Enum dùng chung đặt tại `Memories.Data.Enums`.
+
+---
+
+## Math Formulas — Damage Calculation
+
+- **Mục tiêu:** rõ ràng, cân bằng được, deterministic theo seed.
+
+### Công thức khuyến nghị
+
+Gọi:
+- $B$: base damage từ card/effect.
+- $A_f$: tổng flat bonus từ attacker buffs.
+- $M_a$: attacker multiplier (ví dụ Wrath, card synergy).
+- $M_t$: target taken-damage multiplier (ví dụ Vulnerable/Guard).
+- $R$: defense mitigation theo công thức mềm.
+- $V$: random variance deterministic từ seed (khuyên dùng $0.95 \le V \le 1.05$).
+- $S$: flat shield của target.
+
+$$
+R = \frac{Defense}{Defense + K} \quad (K = 100 \text{ mặc định})
+$$
+
+$$
+Raw = (B + A_f) \times M_a \times M_t \times (1 - R) \times V
+$$
+
+$$
+FinalDamage = \max\left(1, \text{round}(Raw) - S\right)
+$$
+
+### Rule notes
+
+- Crit (nếu có): nhân vào $M_a$ trước bước mitigation.
+- Hiệu ứng đặc biệt card (ví dụ Pain x2 khi target có trạng thái "U buồn") được cộng vào $M_a$.
+- Clamp toàn bộ multiplier trong khoảng hợp lệ để tránh overflow/one-shot ngoài ý muốn.
+- Emit `OnDamageDealt` với cả `baseDamage`, `totalMultiplier`, `finalDamage` để debug balance.
+
+### Ví dụ nhanh
+
+- Card Pain: $B=30$, attacker buff +10% -> $M_a=1.1$, target Vulnerable +25% -> $M_t=1.25$, defense=50, $K=100$, variance $V=1.0$, shield $S=2$.
+
+$$
+R = 50/(50+100)=0.333
+$$
+
+$$
+Raw = 30 \times 1.1 \times 1.25 \times (1-0.333) \approx 27.5
+$$
+
+$$
+FinalDamage = \max(1, round(27.5)-2)=26
+$$
 
 ---
 
