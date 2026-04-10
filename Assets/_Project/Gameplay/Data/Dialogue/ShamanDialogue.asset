@@ -16,37 +16,32 @@ MonoBehaviour:
   startNodeID: 0
   nodes:
   - nodeID: 0
-    speakerName: ???
+    speakerName: Shaman
     textContent: Such a bad ghost...
     triggerEvent: 0
     eventParam: 
-    portraitId: 
     defaultNextNodeID: 1
   - nodeID: 1
     speakerName: You
     textContent: What do you mean?
     triggerEvent: 0
     eventParam: 
-    portraitId: 
     defaultNextNodeID: 2
-  - nodeID: 3
-    speakerName: ???
+  - nodeID: 2
+    speakerName: Shaman
     textContent: Feeling lost?
     triggerEvent: 0
     eventParam: 
-    portraitId: 
     defaultNextNodeID: 3
   - nodeID: 3
-    speakerName: ???
+    speakerName: Shaman
     textContent: Feeling lost?
     triggerEvent: 0
     eventParam: 
-    portraitId: 
     defaultNextNodeID: 4
   - nodeID: 4
-    speakerName: ???
+    speakerName: Shaman
     textContent: Take these cards with you, you will need it
     triggerEvent: 3
     eventParam: 
-    portraitId: 
     defaultNextNodeID: -1

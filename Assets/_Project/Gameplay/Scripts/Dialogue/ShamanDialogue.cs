@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class NpcDialogueInteractable : MonoBehaviour, IInteractable
+public class ShamanDialogue : MonoBehaviour, IInteractable
 {
 	 [SerializeField] private DialogueData dialogueData;
 

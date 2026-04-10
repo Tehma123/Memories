@@ -22,6 +22,7 @@ public class DialogueManager : MonoBehaviour
     private bool _nodeEventProcessed;
 
     public bool IsDialogueActive => _isActive;
+    public DialogueNode CurrentNode => _currentNode;
     public float TypewriterSpeed => typewriterSpeed;
 
     public event Action<DialogueData> OnDialogueStarted;

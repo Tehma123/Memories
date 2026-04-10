@@ -23,7 +23,6 @@ public class DialogueNode
 
 	public DialogueEvent triggerEvent = DialogueEvent.None;
 	public string eventParam = string.Empty;
-	public string portraitId = string.Empty;
 	public int defaultNextNodeID = -1;
 }
 
