@@ -20,15 +20,14 @@ public sealed class CardRewardPresentationData
 public class CardRewardPresenter : MonoBehaviour
 {
     [Header("UI References")]
-    [SerializeField] private Canvas rootCanvas;
     [SerializeField] private RectTransform overlayRoot;
     [SerializeField] private RectTransform cardRoot;
     [SerializeField] private Image cardImage;
     [SerializeField] private TMP_Text captionText;
     [SerializeField] private CanvasGroup canvasGroup;
+    [SerializeField] private DialogueUIManager dialogueUIManager;
 
     [Header("Behavior")]
-    [SerializeField] private bool autoCreateRuntimeUIIfMissing = true;
     [SerializeField] private bool hideOnStart = true;
 
     [Header("Animation")]
@@ -40,8 +39,15 @@ public class CardRewardPresenter : MonoBehaviour
     [SerializeField] private float pauseBetweenCards = 0.2f;
     [SerializeField] [Range(0.1f, 1.5f)] private float startScale = 0.85f;
 
+    [Header("Caption Typewriter")]
+    [SerializeField] private bool enableCaptionTypewriter = true;
+    [SerializeField] [Min(0f)] private float captionCharsPerSecond = 20f;
+    [SerializeField] [Min(0f)] private float captionSentencePause = 0.08f;
+    [SerializeField] [Min(0f)] private float captionCommaPause = 0.04f;
+
     private Coroutine _sequenceCoroutine;
     private Vector2 _restCardPosition;
+    private bool _missingReferencesWarningLogged;
 
     public bool IsPlaying => _sequenceCoroutine != null;
 
@@ -115,6 +121,7 @@ public class CardRewardPresenter : MonoBehaviour
     private IEnumerator AnimateSingleCard(CardRewardPresentationData card)
     {
         string caption = card.Caption ?? string.Empty;
+        bool hasCaption = false;
 
         cardImage.sprite = card.Sprite;
         cardImage.preserveAspect = true;
@@ -122,9 +129,10 @@ public class CardRewardPresenter : MonoBehaviour
 
         if (captionText != null)
         {
-            bool hasCaption = !string.IsNullOrWhiteSpace(caption);
+            hasCaption = !string.IsNullOrWhiteSpace(caption);
             captionText.gameObject.SetActive(hasCaption);
-            captionText.text = caption;
+            captionText.text = hasCaption ? caption : string.Empty;
+            captionText.maxVisibleCharacters = hasCaption ? 0 : int.MaxValue;
         }
 
         Vector2 startPosition = _restCardPosition + flyInOffset;
@@ -139,6 +147,11 @@ public class CardRewardPresenter : MonoBehaviour
         cardRoot.localScale = Vector3.one * startScale;
 
         yield return AnimateIn(startPosition, endPosition);
+
+        if (hasCaption)
+        {
+            yield return TypeCaption(caption);
+        }
 
         if (holdDuration > 0f)
         {
@@ -254,88 +267,10 @@ public class CardRewardPresenter : MonoBehaviour
             return;
         }
 
-        if (!autoCreateRuntimeUIIfMissing)
+        if (!_missingReferencesWarningLogged)
         {
-            return;
-        }
-
-        CreateRuntimeUIIfMissing();
-        EnsureCanvasGroup();
-
-        if (cardRoot != null)
-        {
-            _restCardPosition = cardRoot.anchoredPosition;
-        }
-    }
-
-    private void CreateRuntimeUIIfMissing()
-    {
-        if (rootCanvas == null)
-        {
-            GameObject canvasObject = new GameObject("RuntimeCardRewardCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            rootCanvas = canvasObject.GetComponent<Canvas>();
-            rootCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            rootCanvas.sortingOrder = 700;
-
-            CanvasScaler scaler = canvasObject.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 0.5f;
-        }
-
-        if (overlayRoot == null)
-        {
-            GameObject overlayObject = new GameObject("CardRewardOverlay", typeof(RectTransform), typeof(CanvasGroup));
-            overlayObject.transform.SetParent(rootCanvas.transform, false);
-            overlayRoot = overlayObject.GetComponent<RectTransform>();
-            overlayRoot.anchorMin = Vector2.zero;
-            overlayRoot.anchorMax = Vector2.one;
-            overlayRoot.offsetMin = Vector2.zero;
-            overlayRoot.offsetMax = Vector2.zero;
-            canvasGroup = overlayObject.GetComponent<CanvasGroup>();
-        }
-
-        if (cardRoot == null)
-        {
-            GameObject cardObject = new GameObject("CardImageRoot", typeof(RectTransform), typeof(Image));
-            cardObject.transform.SetParent(overlayRoot, false);
-            cardRoot = cardObject.GetComponent<RectTransform>();
-            cardRoot.anchorMin = new Vector2(0.5f, 0.56f);
-            cardRoot.anchorMax = new Vector2(0.5f, 0.56f);
-            cardRoot.pivot = new Vector2(0.5f, 0.5f);
-            cardRoot.sizeDelta = new Vector2(360f, 520f);
-            cardRoot.anchoredPosition = Vector2.zero;
-
-            cardImage = cardObject.GetComponent<Image>();
-            cardImage.color = Color.white;
-            cardImage.preserveAspect = true;
-        }
-
-        if (captionText == null)
-        {
-            GameObject captionObject = new GameObject("CardCaption", typeof(RectTransform), typeof(TextMeshProUGUI));
-            captionObject.transform.SetParent(overlayRoot, false);
-
-            RectTransform captionRect = captionObject.GetComponent<RectTransform>();
-            captionRect.anchorMin = new Vector2(0.08f, 0.08f);
-            captionRect.anchorMax = new Vector2(0.92f, 0.2f);
-            captionRect.offsetMin = Vector2.zero;
-            captionRect.offsetMax = Vector2.zero;
-
-            TextMeshProUGUI runtimeCaption = captionObject.GetComponent<TextMeshProUGUI>();
-            runtimeCaption.text = string.Empty;
-            runtimeCaption.fontSize = 34f;
-            runtimeCaption.color = Color.white;
-            runtimeCaption.alignment = TextAlignmentOptions.Center;
-            runtimeCaption.textWrappingMode = TextWrappingModes.Normal;
-
-            if (TMP_Settings.defaultFontAsset != null)
-            {
-                runtimeCaption.font = TMP_Settings.defaultFontAsset;
-            }
-
-            captionText = runtimeCaption;
+            Debug.LogWarning("CardRewardPresenter is missing required UI references. Assign Overlay Root, Card Root, and Card Image in the Inspector.");
+            _missingReferencesWarningLogged = true;
         }
     }
 
@@ -368,6 +303,74 @@ public class CardRewardPresenter : MonoBehaviour
         {
             canvasGroup.alpha = 0f;
         }
+    }
+
+    private IEnumerator TypeCaption(string fullCaption)
+    {
+        if (captionText == null)
+        {
+            yield break;
+        }
+
+        captionText.text = fullCaption ?? string.Empty;
+        captionText.maxVisibleCharacters = 0;
+        captionText.ForceMeshUpdate();
+
+        int visibleCharacterCount = captionText.textInfo.characterCount;
+        if (!enableCaptionTypewriter || captionCharsPerSecond <= 0f || visibleCharacterCount <= 0)
+        {
+            captionText.maxVisibleCharacters = int.MaxValue;
+            yield break;
+        }
+
+        float baseCharacterDelay = 1f / captionCharsPerSecond;
+
+        for (int i = 0; i < visibleCharacterCount; i++)
+        {
+            captionText.maxVisibleCharacters = i + 1;
+
+            char visibleCharacter = captionText.textInfo.characterInfo[i].character;
+            PlayCaptionTick(visibleCharacter);
+            float delay = GetCaptionCharacterDelay(visibleCharacter, baseCharacterDelay);
+            if (delay > 0f)
+            {
+                yield return new WaitForSecondsRealtime(delay);
+            }
+            else
+            {
+                yield return null;
+            }
+        }
+
+        captionText.maxVisibleCharacters = int.MaxValue;
+    }
+
+    private float GetCaptionCharacterDelay(char visibleCharacter, float baseCharacterDelay)
+    {
+        float delay = baseCharacterDelay;
+
+        if (visibleCharacter == ',')
+        {
+            delay += captionCommaPause;
+            return delay;
+        }
+
+        if (visibleCharacter == '.' || visibleCharacter == '!' || visibleCharacter == '?')
+        {
+            delay += captionSentencePause;
+        }
+
+        return delay;
+    }
+
+    private void PlayCaptionTick(char visibleCharacter)
+    {
+        if (dialogueUIManager == null)
+        {
+            dialogueUIManager = FindFirstObjectByType<DialogueUIManager>();
+        }
+
+        dialogueUIManager?.PlaySharedTypewriterTick(visibleCharacter);
     }
 
     private static float EaseOutSine(float t)

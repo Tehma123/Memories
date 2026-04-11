@@ -25,7 +25,7 @@ public class DialogueManager : MonoBehaviour
     public static DialogueManager Instance { get; private set; }
 
     [SerializeField] private bool pausePlayerDuringDialogue = true;
-    [SerializeField] private float typewriterSpeed = 40f;
+    [SerializeField] private float typewriterSpeed = 20f;
     [SerializeField] private PlayerController playerController;
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerInteraction playerInteraction;

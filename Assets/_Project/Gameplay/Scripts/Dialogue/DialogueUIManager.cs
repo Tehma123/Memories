@@ -459,7 +459,7 @@ public class DialogueUIManager : MonoBehaviour
             yield break;
         }
 
-        float charsPerSecond = dialogueManager != null ? dialogueManager.TypewriterSpeed : 40f;
+        float charsPerSecond = dialogueManager != null ? dialogueManager.TypewriterSpeed : 20f;
         if (charsPerSecond <= 0f)
         {
             dialogueText.text = fullText;
@@ -522,6 +522,11 @@ public class DialogueUIManager : MonoBehaviour
         }
 
         return delay;
+    }
+
+    public void PlaySharedTypewriterTick(char visibleCharacter)
+    {
+        PlayTypewriterTick(visibleCharacter);
     }
 
     private void PlayTypewriterTick(char visibleCharacter)
