@@ -1,10 +1,27 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System;
-using System.Collections.Generic;
 
 public class DialogueManager : MonoBehaviour
 {
+    [Serializable]
+    private class CardRewardEntry
+    {
+        public Sprite overrideSprite;
+
+        [TextArea(2, 4)]
+        public string caption;
+    }
+
+    [Serializable]
+    private class CardRewardSequence
+    {
+        public string sequenceId = string.Empty;
+        public List<CardRewardEntry> cards = new List<CardRewardEntry>();
+    }
+
     public static DialogueManager Instance { get; private set; }
 
     [SerializeField] private bool pausePlayerDuringDialogue = true;
@@ -15,12 +32,17 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private StateManager stateManager;
     [SerializeField] private MemoryManager memoryManager;
 
+    [Header("Card Reward Event")]
+    [SerializeField] private CardRewardPresenter cardRewardPresenter;
+    [SerializeField] private List<CardRewardSequence> cardRewardSequences = new List<CardRewardSequence>();
+
     private readonly HashSet<string> _flags = new HashSet<string>();
 
     private DialogueData _activeDialogue;
     private DialogueNode _currentNode;
     private bool _isActive;
     private bool _nodeEventProcessed;
+    private Coroutine _advanceNodeCoroutine;
 
     public bool IsDialogueActive => _isActive;
     public DialogueNode CurrentNode => _currentNode;
@@ -64,6 +86,11 @@ public class DialogueManager : MonoBehaviour
         {
             memoryManager = FindFirstObjectByType<MemoryManager>();
         }
+
+        if (cardRewardPresenter == null)
+        {
+            cardRewardPresenter = FindFirstObjectByType<CardRewardPresenter>();
+        }
     }
 
     public void StartDialogue(DialogueData dialogueData)
@@ -80,6 +107,7 @@ public class DialogueManager : MonoBehaviour
 
         _activeDialogue = dialogueData;
         _isActive = true;
+        _advanceNodeCoroutine = null;
         SetPlayerInputEnabled(false);
 
         _currentNode = _activeDialogue.GetStartNode();
@@ -97,20 +125,12 @@ public class DialogueManager : MonoBehaviour
 
     public void ShowNextLine()
     {
-        if (!_isActive || _currentNode == null)
+        if (!_isActive || _currentNode == null || _advanceNodeCoroutine != null)
         {
             return;
         }
 
-        DispatchNodeEventIfNeeded();
-
-        if (_currentNode.defaultNextNodeID < 0)
-        {
-            EndDialogue();
-            return;
-        }
-
-        MoveToNode(_currentNode.defaultNextNodeID);
+        _advanceNodeCoroutine = StartCoroutine(AdvanceCurrentNodeCoroutine());
     }
 
     public void EndDialogue()
@@ -120,15 +140,51 @@ public class DialogueManager : MonoBehaviour
             return;
         }
 
+        if (_advanceNodeCoroutine != null)
+        {
+            StopCoroutine(_advanceNodeCoroutine);
+            _advanceNodeCoroutine = null;
+        }
+
         DialogueData endedDialogue = _activeDialogue;
 
         _isActive = false;
         _activeDialogue = null;
         _currentNode = null;
         _nodeEventProcessed = false;
+
+        if (cardRewardPresenter != null)
+        {
+            cardRewardPresenter.StopSequence();
+        }
+
         SetPlayerInputEnabled(true);
 
         OnDialogueEnded?.Invoke(endedDialogue);
+    }
+
+    private IEnumerator AdvanceCurrentNodeCoroutine()
+    {
+        if (!_nodeEventProcessed && _currentNode != null)
+        {
+            _nodeEventProcessed = true;
+            yield return DispatchEventRoutine(_currentNode.triggerEvent, _currentNode.eventParam);
+        }
+
+        _advanceNodeCoroutine = null;
+
+        if (!_isActive || _currentNode == null)
+        {
+            yield break;
+        }
+
+        if (_currentNode.defaultNextNodeID < 0)
+        {
+            EndDialogue();
+            yield break;
+        }
+
+        MoveToNode(_currentNode.defaultNextNodeID);
     }
 
     public bool HasFlag(string flagId)
@@ -173,38 +229,27 @@ public class DialogueManager : MonoBehaviour
         OnDialogueLineShown?.Invoke(_currentNode);
     }
 
-    private void DispatchNodeEventIfNeeded()
-    {
-        if (_nodeEventProcessed || _currentNode == null)
-        {
-            return;
-        }
-
-        _nodeEventProcessed = true;
-        DispatchEvent(_currentNode.triggerEvent, _currentNode.eventParam);
-    }
-
-    private void DispatchEvent(DialogueEvent dialogueEvent, string eventParam)
+    private IEnumerator DispatchEventRoutine(DialogueEvent dialogueEvent, string eventParam)
     {
         switch (dialogueEvent)
         {
             case DialogueEvent.None:
-                break;
+                yield break;
 
             case DialogueEvent.StartBattle:
                 Debug.Log($"Dialogue requested battle start: {eventParam}");
-                break;
+                yield break;
 
             case DialogueEvent.UnlockMemoryFragment:
                 if (memoryManager != null && !string.IsNullOrWhiteSpace(eventParam))
                 {
                     memoryManager.UnlockFragment(eventParam);
                 }
-                break;
+                yield break;
 
             case DialogueEvent.GiveCard:
-                Debug.Log($"Dialogue requested card grant: {eventParam}");
-                break;
+                yield return HandleGiveCardEvent(eventParam);
+                yield break;
 
             case DialogueEvent.SetFlag:
                 if (!string.IsNullOrWhiteSpace(eventParam))
@@ -212,23 +257,98 @@ public class DialogueManager : MonoBehaviour
                     _flags.Add(eventParam);
                     stateManager?.ApplyState(gameObject, eventParam, 1);
                 }
-                break;
+                yield break;
 
             case DialogueEvent.TriggerVignette:
                 Debug.Log($"Dialogue requested vignette trigger: {eventParam}");
-                break;
+                yield break;
 
             case DialogueEvent.LoadScene:
                 if (!string.IsNullOrWhiteSpace(eventParam))
                 {
                     SceneManager.LoadScene(eventParam);
                 }
-                break;
+                yield break;
 
             default:
                 Debug.LogWarning($"Unhandled dialogue event: {dialogueEvent}");
-                break;
+                yield break;
         }
+    }
+
+    private IEnumerator HandleGiveCardEvent(string eventParam)
+    {
+        string sequenceId = string.IsNullOrWhiteSpace(eventParam) ? string.Empty : eventParam.Trim();
+        if (string.IsNullOrWhiteSpace(sequenceId))
+        {
+            Debug.LogWarning("GiveCard event has no sequence id. Set eventParam to a reward sequence id.");
+            yield break;
+        }
+
+        CardRewardSequence sequence = FindCardRewardSequence(sequenceId);
+        if (sequence == null || sequence.cards == null || sequence.cards.Count == 0)
+        {
+            Debug.LogWarning($"No card reward sequence found for id '{sequenceId}'.");
+            yield break;
+        }
+
+        List<CardRewardPresentationData> presentationCards = new List<CardRewardPresentationData>(sequence.cards.Count);
+
+        for (int i = 0; i < sequence.cards.Count; i++)
+        {
+            CardRewardEntry entry = sequence.cards[i];
+            if (entry == null)
+            {
+                continue;
+            }
+
+            Sprite sprite = entry.overrideSprite;
+            string caption = entry.caption;
+
+            presentationCards.Add(new CardRewardPresentationData(sprite, caption));
+        }
+
+        if (cardRewardPresenter == null)
+        {
+            cardRewardPresenter = FindFirstObjectByType<CardRewardPresenter>();
+        }
+
+        if (cardRewardPresenter == null || presentationCards.Count == 0)
+        {
+            yield break;
+        }
+
+        bool sequenceCompleted = false;
+        cardRewardPresenter.PlaySequence(presentationCards, () => sequenceCompleted = true);
+
+        while (!sequenceCompleted)
+        {
+            yield return null;
+        }
+    }
+
+    private CardRewardSequence FindCardRewardSequence(string sequenceId)
+    {
+        if (string.IsNullOrWhiteSpace(sequenceId) || cardRewardSequences == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < cardRewardSequences.Count; i++)
+        {
+            CardRewardSequence candidate = cardRewardSequences[i];
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            if (string.Equals(candidate.sequenceId, sequenceId, StringComparison.OrdinalIgnoreCase))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private void SetPlayerInputEnabled(bool isEnabled)

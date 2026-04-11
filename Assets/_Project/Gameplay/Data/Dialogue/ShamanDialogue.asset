@@ -17,31 +17,68 @@ MonoBehaviour:
   nodes:
   - nodeID: 0
     speakerName: Shaman
-    textContent: Such a bad ghost...
+    textContent: Welcome, hmm?
     triggerEvent: 0
     eventParam: 
     defaultNextNodeID: 1
   - nodeID: 1
-    speakerName: You
-    textContent: What do you mean?
+    speakerName: Shaman
+    textContent: What an interesting lost soul, how can I help you?
     triggerEvent: 0
     eventParam: 
     defaultNextNodeID: 2
   - nodeID: 2
-    speakerName: Shaman
-    textContent: Feeling lost?
+    speakerName: You
+    textContent: Why am I here?
     triggerEvent: 0
     eventParam: 
     defaultNextNodeID: 3
   - nodeID: 3
     speakerName: Shaman
-    textContent: I can help you
+    textContent: You should ask yourself, not me
     triggerEvent: 0
     eventParam: 
     defaultNextNodeID: 4
   - nodeID: 4
-    speakerName: Shaman
-    textContent: Take these cards with you, you will need it
-    triggerEvent: 3
+    speakerName: You
+    textContent: What do you mean? I don't understand
+    triggerEvent: 0
     eventParam: 
-    defaultNextNodeID: -1
+    defaultNextNodeID: 5
+  - nodeID: 5
+    speakerName: Shaman
+    textContent: Then you have to remember it yourself
+    triggerEvent: 0
+    eventParam: 
+    defaultNextNodeID: 6
+  - nodeID: 6
+    speakerName: You
+    textContent: ...
+    triggerEvent: 0
+    eventParam: 
+    defaultNextNodeID: 7
+  - nodeID: 7
+    speakerName: You
+    textContent: Anything else?
+    triggerEvent: 0
+    eventParam: 
+    defaultNextNodeID: 8
+  - nodeID: 8
+    speakerName: Shaman
+    textContent: That's all for you
+    triggerEvent: 0
+    eventParam: 
+    defaultNextNodeID: 9
+  - nodeID: 9
+    speakerName: Shaman
+    textContent: It's the easiest way to get out of  this. But be careful, things
+      won't be easy on you
+    triggerEvent: 0
+    eventParam: 
+    defaultNextNodeID: 10
+  - nodeID: 10
+    speakerName: Shaman
+    textContent: Take these cards with you. They might be useful when you're in trouble
+    triggerEvent: 3
+    eventParam: Shaman_5_cards
+    defaultNextNodeID: 11
