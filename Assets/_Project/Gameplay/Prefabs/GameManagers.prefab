@@ -1,0 +1,128 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7148960285982515476
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6698621897160219362}
+  - component: {fileID: 4191699289339062875}
+  - component: {fileID: 7250783013755786887}
+  - component: {fileID: 8346662932880129188}
+  - component: {fileID: 2097642561621135937}
+  - component: {fileID: 2218664821547585735}
+  m_Layer: 0
+  m_Name: GameManagers
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6698621897160219362
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7148960285982515476}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.07166, y: 0.56312, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4191699289339062875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7148960285982515476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6e596f41c2ab224eb1435120aa5e6ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueManager
+  pausePlayerDuringDialogue: 1
+  typewriterSpeed: 25
+  playerController: {fileID: 2097642561621135937}
+  playerMovement: {fileID: 0}
+  playerInteraction: {fileID: 2218664821547585735}
+  stateManager: {fileID: 8346662932880129188}
+  memoryManager: {fileID: 7250783013755786887}
+  cardRewardPresenter: {fileID: 0}
+  cardRewardSequences:
+  - sequenceId: Shaman_5_cards
+    cards:
+    - overrideSprite: {fileID: 6582439558329452077, guid: f25a1bcaef42192428ddc186d43dba35, type: 3}
+      caption: 'Wraith - "You held this one the longest. It kept you warm, didn''t
+        it." '
+    - overrideSprite: {fileID: -1653580178665872885, guid: ce5e510f2800dc5429a46f3ac9d9c0ee, type: 3}
+      caption: Euphoria - "It only visits once. Use it before you forget what it
+        felt like."
+    - overrideSprite: {fileID: -2670464085785668882, guid: 0eb94f5b55063f84f82e64e1b4dfd2f4, type: 3}
+      caption: Nostalgia - "What's gone isn't lost. Not yet. Reach back."
+    - overrideSprite: {fileID: -5084580402126105551, guid: 725a4ed779f744e41b379351d62c4d4f, type: 3}
+      caption: Void - "The feeling after the door slammed. You know the one."
+    - overrideSprite: {fileID: -986845694075832296, guid: 6d4dbfd8a00ab9342a3afd97b7ab5db9, type: 3}
+      caption: Pain - "It hurts twice as much when they're already broken."
+--- !u!114 &7250783013755786887
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7148960285982515476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 956219125e5625d4f912be58f210704f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MemoryManager
+  startingMemoryPercent: 100
+  maxMemoryPercent: 100
+--- !u!114 &8346662932880129188
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7148960285982515476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3410074248cacaf42a0c286b23bdb301, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StateManager
+--- !u!114 &2097642561621135937
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7148960285982515476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5ddfdeceffc39a43ab21d7e611d4057, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  moveSpeed: 2
+--- !u!114 &2218664821547585735
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7148960285982515476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a47cc0eb6cb82f54ba5a25ba968c5ede, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteraction
+  interactionRange: 1.5
+  interactionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295

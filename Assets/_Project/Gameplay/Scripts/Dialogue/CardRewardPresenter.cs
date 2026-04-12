@@ -39,6 +39,10 @@ public class CardRewardPresenter : MonoBehaviour
     [SerializeField] private float pauseBetweenCards = 0.2f;
     [SerializeField] [Range(0.1f, 1.5f)] private float startScale = 0.85f;
 
+    [Header("LeanTween Easing")]
+    [SerializeField] private LeanTweenType flyInEase = LeanTweenType.easeInOutSine;
+    [SerializeField] private LeanTweenType fadeOutEase = LeanTweenType.easeInOutSine;
+
     [Header("Caption Typewriter")]
     [SerializeField] private bool enableCaptionTypewriter = true;
     [SerializeField] [Min(0f)] private float captionCharsPerSecond = 20f;
@@ -48,6 +52,7 @@ public class CardRewardPresenter : MonoBehaviour
     private Coroutine _sequenceCoroutine;
     private Vector2 _restCardPosition;
     private bool _missingReferencesWarningLogged;
+    private int _activeTweenId = -1;
 
     public bool IsPlaying => _sequenceCoroutine != null;
 
@@ -180,23 +185,31 @@ public class CardRewardPresenter : MonoBehaviour
             yield break;
         }
 
-        float elapsed = 0f;
-        while (elapsed < flyInDuration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float t = Mathf.Clamp01(elapsed / flyInDuration);
+        bool tweenCompleted = false;
+        CancelActiveTween();
 
-            float moveEase = EaseOutBack(t);
-            float fadeEase = EaseOutSine(t);
-
-            cardRoot.anchoredPosition = Vector2.LerpUnclamped(from, to, moveEase);
-            cardRoot.localScale = Vector3.one * Mathf.LerpUnclamped(startScale, 1f, moveEase);
-
-            if (canvasGroup != null)
+        _activeTweenId = LeanTween.value(gameObject, 0f, 1f, flyInDuration)
+            .setEase(flyInEase)
+            .setIgnoreTimeScale(true)
+            .setOnUpdate((float progress) =>
             {
-                canvasGroup.alpha = fadeEase;
-            }
+                cardRoot.anchoredPosition = Vector2.LerpUnclamped(from, to, progress);
+                cardRoot.localScale = Vector3.one * Mathf.LerpUnclamped(startScale, 1f, progress);
 
+                if (canvasGroup != null)
+                {
+                    canvasGroup.alpha = progress;
+                }
+            })
+            .setOnComplete(() =>
+            {
+                tweenCompleted = true;
+                _activeTweenId = -1;
+            })
+            .id;
+
+        while (!tweenCompleted)
+        {
             yield return null;
         }
 
@@ -221,19 +234,29 @@ public class CardRewardPresenter : MonoBehaviour
             yield break;
         }
 
-        float elapsed = 0f;
-        while (elapsed < fadeOutDuration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            float t = Mathf.Clamp01(elapsed / fadeOutDuration);
-            float eased = EaseInSine(t);
+        bool tweenCompleted = false;
+        CancelActiveTween();
 
-            cardRoot.anchoredPosition = Vector2.LerpUnclamped(from, to, eased);
-            if (canvasGroup != null)
+        _activeTweenId = LeanTween.value(gameObject, 0f, 1f, fadeOutDuration)
+            .setEase(fadeOutEase)
+            .setIgnoreTimeScale(true)
+            .setOnUpdate((float progress) =>
             {
-                canvasGroup.alpha = Mathf.LerpUnclamped(1f, 0f, eased);
-            }
+                cardRoot.anchoredPosition = Vector2.LerpUnclamped(from, to, progress);
+                if (canvasGroup != null)
+                {
+                    canvasGroup.alpha = Mathf.LerpUnclamped(1f, 0f, progress);
+                }
+            })
+            .setOnComplete(() =>
+            {
+                tweenCompleted = true;
+                _activeTweenId = -1;
+            })
+            .id;
 
+        while (!tweenCompleted)
+        {
             yield return null;
         }
 
@@ -252,10 +275,23 @@ public class CardRewardPresenter : MonoBehaviour
             _sequenceCoroutine = null;
         }
 
+        CancelActiveTween();
+
         if (canvasGroup != null)
         {
             canvasGroup.alpha = 0f;
         }
+    }
+
+    private void CancelActiveTween()
+    {
+        if (_activeTweenId < 0)
+        {
+            return;
+        }
+
+        LeanTween.cancel(_activeTweenId);
+        _activeTweenId = -1;
     }
 
     private void EnsureBindings()
@@ -371,22 +407,5 @@ public class CardRewardPresenter : MonoBehaviour
         }
 
         dialogueUIManager?.PlaySharedTypewriterTick(visibleCharacter);
-    }
-
-    private static float EaseOutSine(float t)
-    {
-        return Mathf.Sin(t * Mathf.PI * 0.5f);
-    }
-
-    private static float EaseInSine(float t)
-    {
-        return 1f - Mathf.Cos(t * Mathf.PI * 0.5f);
-    }
-
-    private static float EaseOutBack(float t)
-    {
-        const float overshoot = 1.70158f;
-        float x = t - 1f;
-        return 1f + (overshoot + 1f) * x * x * x + overshoot * x * x;
     }
 }

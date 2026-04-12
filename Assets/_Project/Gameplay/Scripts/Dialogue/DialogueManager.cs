@@ -37,6 +37,7 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private List<CardRewardSequence> cardRewardSequences = new List<CardRewardSequence>();
 
     private readonly HashSet<string> _flags = new HashSet<string>();
+    private readonly HashSet<string> _completedCardRewardSequences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     private DialogueData _activeDialogue;
     private DialogueNode _currentNode;
@@ -197,6 +198,16 @@ public class DialogueManager : MonoBehaviour
         return _flags.Contains(flagId);
     }
 
+    public bool IsCardRewardSequenceCompleted(string sequenceId)
+    {
+        if (string.IsNullOrWhiteSpace(sequenceId))
+        {
+            return false;
+        }
+
+        return _completedCardRewardSequences.Contains(sequenceId.Trim());
+    }
+
     private void MoveToNode(int nodeID)
     {
         if (_activeDialogue == null)
@@ -325,6 +336,8 @@ public class DialogueManager : MonoBehaviour
         {
             yield return null;
         }
+
+        _completedCardRewardSequences.Add(sequenceId);
     }
 
     private CardRewardSequence FindCardRewardSequence(string sequenceId)

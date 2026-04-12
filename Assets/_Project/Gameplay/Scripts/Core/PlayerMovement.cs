@@ -4,15 +4,18 @@ using UnityEngine.InputSystem;
 public class PlayerMovement : MonoBehaviour
 {
     private Rigidbody2D rb;
+    private PlayerInteraction _playerInteraction;
     [SerializeField] private float speed = 2f;
     private Vector2 movement;
     private bool _isMovementEnabled = true;
     private bool _wasInteractPressed;
     public CameraSmoothFollow cameraScript;
     private IInteractable currentTarget;
-    private void Start()
+
+    private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        _playerInteraction = GetComponent<PlayerInteraction>();
     }
 
     private void FixedUpdate()
@@ -72,6 +75,11 @@ public class PlayerMovement : MonoBehaviour
 
     public void OnInteract(InputValue value)
     {
+        if (_playerInteraction != null && _playerInteraction.enabled)
+        {
+            return;
+        }
+
         if (!_isMovementEnabled || value == null)
         {
             _wasInteractPressed = false;

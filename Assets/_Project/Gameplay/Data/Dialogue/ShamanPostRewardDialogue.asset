@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07354b2836b804348b3dd06448464c2c, type: 3}
+  m_Name: ShamanPostRewardDialogue
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueData
+  dialogueID: 
+  startNodeID: 0
+  nodes:
+  - nodeID: 0
+    speakerName: Shaman
+    textContent: Go forward and remember everything
+    triggerEvent: 0
+    eventParam: 
+    defaultNextNodeID: 1
+  - nodeID: 1
+    speakerName: Shaman
+    textContent: It's awful for a soul to forget its memories
+    triggerEvent: 0
+    eventParam: 
+    defaultNextNodeID: 2
+  - nodeID: 2
+    speakerName: You
+    textContent: ...
+    triggerEvent: 0
+    eventParam: 
+    defaultNextNodeID: 3

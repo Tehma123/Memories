@@ -114,7 +114,7 @@ public class DialogueUIManager : MonoBehaviour
 
         if (speakerText != null)
         {
-            speakerText.text = string.IsNullOrWhiteSpace(node.speakerName) ? "Narrator" : node.speakerName;
+            speakerText.text = node.speakerName;
         }
 
         StartTypewriterAnimation(node.textContent);
