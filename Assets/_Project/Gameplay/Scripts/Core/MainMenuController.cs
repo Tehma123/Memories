@@ -1,13 +1,15 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+
 public class MainMenuController : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     [SerializeField] private GameObject button;
+    [SerializeField] private string playSceneName = "ExplorationAct0";
+    [SerializeField] private string playSceneEntryPointId = string.Empty;
 
     public void Play()
     {
-        SceneManager.LoadScene("ExplorationAct0");
+        SceneTransitionContext.LoadScene(playSceneName, playSceneEntryPointId);
     }
 
     public void Options()

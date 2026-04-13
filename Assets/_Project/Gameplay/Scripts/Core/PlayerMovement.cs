@@ -12,6 +12,8 @@ public class PlayerMovement : MonoBehaviour
     public CameraSmoothFollow cameraScript;
     private IInteractable currentTarget;
 
+    public Vector2 MoveInput => movement;
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();

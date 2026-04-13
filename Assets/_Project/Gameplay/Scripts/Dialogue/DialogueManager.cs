@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class DialogueManager : MonoBehaviour
 {
@@ -26,7 +25,6 @@ public class DialogueManager : MonoBehaviour
 
     [SerializeField] private bool pausePlayerDuringDialogue = true;
     [SerializeField] private float typewriterSpeed = 20f;
-    [SerializeField] private PlayerController playerController;
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerInteraction playerInteraction;
     [SerializeField] private StateManager stateManager;
@@ -62,11 +60,6 @@ public class DialogueManager : MonoBehaviour
         }
 
         Instance = this;
-
-        if (playerController == null)
-        {
-            playerController = FindFirstObjectByType<PlayerController>();
-        }
 
         if (playerMovement == null)
         {
@@ -275,9 +268,13 @@ public class DialogueManager : MonoBehaviour
                 yield break;
 
             case DialogueEvent.LoadScene:
-                if (!string.IsNullOrWhiteSpace(eventParam))
+                if (SceneTransitionContext.TryParseSceneAndEntry(eventParam, out string sceneName, out string entryPointId))
                 {
-                    SceneManager.LoadScene(eventParam);
+                    SceneTransitionContext.LoadScene(sceneName, entryPointId);
+                }
+                else
+                {
+                    Debug.LogWarning("LoadScene event requires a scene name. Use 'SceneName' or 'SceneName|EntryPointId'.");
                 }
                 yield break;
 
@@ -371,7 +368,6 @@ public class DialogueManager : MonoBehaviour
             return;
         }
 
-        playerController?.SetMovementEnabled(isEnabled);
         playerMovement?.SetMovementEnabled(isEnabled);
         playerInteraction?.SetInteractionEnabled(isEnabled);
     }

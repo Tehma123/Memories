@@ -568,6 +568,54 @@ $$
 
 ---
 
+## Cập nhật triển khai scripts/code (đã làm thêm đến 2026-04-12)
+
+### Đã triển khai trong codebase
+
+- **Core / Input / Interaction**
+  - `PlayerController`: di chuyển bằng Input System, có `LookDirection`, bật/tắt movement runtime.
+  - `PlayerInteraction`: tìm `IInteractable` gần nhất (trigger list + overlap fallback), có chống retrigger khi giữ phím (`_wasInteractPressed`).
+  - `PlayerMovement`: vẫn được giữ để tương thích scene/prefab cũ và được `DialogueManager` khoá/mở cùng `PlayerController`.
+  - `MemoryManager`: quản lý Memory hiện tại/tối đa, `TrySpend`, `CanSpend`, unlock memory fragments, event `OnMemoryChanged`, `OnMemoryDepleted`, `OnMemoryFragmentUnlocked`.
+  - `StateManager`: quản lý state theo target + số turn còn lại, có tick start/end turn, tự dọn target đã destroy.
+
+- **Battle loop & action pipeline**
+  - `BattleManager`: tạo encounter, spawn enemy từ `EnemyData`, tạo `BattleContext`, draw initial hand, turn loop cơ bản (start/end turn, enemy turn, win/lose).
+  - `ActionQueue`: queue `IBattleAction`, process tuần tự theo `BattleContext`.
+  - `PlayCardAction`: đã xử lý cost theo `CardData.costPercentage` + `MemoryManager.TrySpend`, resolve nhiều `EffectType` (Damage/Heal/State/Draw/Discard/Exile/ReturnFromDiscard).
+  - `DeckManager`: đầy đủ draw pile, hand, discard, exile, reshuffle, random discard/exile/return, event `OnDeckEmpty`.
+  - `EnemyController`: chọn move ngẫu nhiên từ `EnemyData`, gây hao Memory người chơi, self-heal, apply state cho player/self.
+  - `BattleContext`: giữ refs manager + RNG seed + danh sách enemy còn sống.
+
+- **Dialogue / Narrative / UI**
+  - `DialogueManager`: chạy node tuyến tính từ `DialogueData`, pause input khi dialogue active, dispatch event theo `DialogueEvent`.
+  - Event đã chạy thật trong `DialogueManager`: `UnlockMemoryFragment`, `GiveCard` (sequence), `SetFlag`, `LoadScene` (`SceneName|EntryPointId`), cùng placeholder log cho `StartBattle`/`TriggerVignette`.
+  - `DialogueUIManager`: typewriter effect có pause theo dấu câu, next/skip bằng phím `F`, chặn nhấn giữ từ frame mở dialogue (wait key release), có thể tự tạo UI runtime nếu thiếu binding.
+  - `CardRewardPresenter`: trình chiếu reward card theo sequence, animation LeanTween (fly-in/hold/fade-out), caption typewriter, callback completion.
+  - `DialogueInteractable`: hỗ trợ pre/post-reward dialogue + lock sang post-reward dialogue sau khi sequence hoàn tất.
+  - `VignetteManager`: show/next/skip/close vignette, one-shot tracking cho vignette không replay, unlock memory fragment nếu cấu hình.
+
+- **Scene transition flow (mới thêm)**
+  - `SceneTransitionContext`: lưu transition context tạm (`scene`, `entryPointId`), parse định dạng `Scene|EntryPoint`, consume khi vào scene đích.
+  - `SceneExitInteractable`: object tương tác để chuyển scene với optional chống bấm lặp.
+  - `SceneEntryPoint`: marker entry point theo `entryPointId`, có fallback marker.
+  - `PlayerSceneEntryHandler`: đặt player vào đúng entry point khi scene load.
+  - `MainMenuController` và `MemoryShop`: đã dùng chung flow `SceneTransitionContext.LoadScene(...)`.
+
+- **Data SO / Interfaces**
+  - `CardData`, `EnemyData`, `DialogueData`, `VignetteData` đã có `CreateAssetMenu` và field-level model để chạy gameplay.
+  - Interfaces đã có trong code: `IInteractable`, `IDamageable`, `IBattleAction`.
+
+### Trạng thái hiện tại so với phần thiết kế nâng cao
+
+- `IBattleAction` hiện đang là `void Resolve(BattleContext)` (đồng bộ), chưa phải coroutine `IEnumerator Resolve(...)`.
+- Chưa có `EventBus` typed events riêng như phần thiết kế chi tiết; hiện chủ yếu dùng C# events trực tiếp trong từng manager.
+- Chưa có `GameStateMachine` trung tâm tách bạch `Exploration/Dialogue/Battle/Vignette` theo state stack.
+- Scene battle additive (`LoadSceneMode.Additive`) chưa được wire đầy đủ; flow hiện tại chủ yếu là scene transition trực tiếp.
+- Save system JSON schema trong tài liệu đang ở mức design; chưa thấy implementation save/load runtime trong scripts hiện có.
+
+---
+
 ## Implementation notes & next steps
 
 - Create SO samples for the 5 cards.

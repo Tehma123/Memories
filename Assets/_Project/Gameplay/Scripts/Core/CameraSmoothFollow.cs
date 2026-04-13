@@ -10,15 +10,29 @@ public class CameraSmoothFollow : MonoBehaviour
     private CinemachineFollow _followComponent;
     private int _activeTweenId = -1;
     private float _lastDirection = 0; // Lưu lại hướng cũ để tránh gọi Tween liên tục
+    private bool _isTracking = true;
 
     void Start()
     {
         _followComponent = vcam.GetComponent<CinemachineFollow>();
     }
 
+    public void SetTracking(bool track)
+    {
+        _isTracking = track;
+        
+        // Stop any active camera movement tweens when disabling tracking
+        if (!track && LeanTween.isTweening(_activeTweenId))
+        {
+            LeanTween.cancel(_activeTweenId);
+        }
+    }
+
     // Hàm này sẽ được gọi từ Script di chuyển của Player
     public void UpdateCameraDirection(float moveX)
     {
+        if (!_isTracking) return;
+
         // Chỉ thực hiện nếu hướng di chuyển thay đổi rõ rệt (tránh số 0 khi đứng yên)
         if (Mathf.Abs(moveX) > 0.1f)
         {

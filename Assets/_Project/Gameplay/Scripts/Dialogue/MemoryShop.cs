@@ -1,8 +1,10 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+
 public class MemoryShop : MonoBehaviour, IInteractable
 {
     [SerializeField] private DialogueData shopDialogue;
+    [SerializeField] private string fallbackSceneName = "MemoryShopScene";
+    [SerializeField] private string fallbackEntryPointId = string.Empty;
 
     public void Interact()
     {
@@ -13,6 +15,6 @@ public class MemoryShop : MonoBehaviour, IInteractable
         }
 
         Debug.Log("Memory shop interaction triggered.");
-        SceneManager.LoadScene("MemoryShopScene");
+        SceneTransitionContext.LoadScene(fallbackSceneName, fallbackEntryPointId);
     }
 }
