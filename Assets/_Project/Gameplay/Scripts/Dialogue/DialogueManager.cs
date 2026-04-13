@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public class DialogueManager : MonoBehaviour
@@ -29,6 +30,11 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private PlayerInteraction playerInteraction;
     [SerializeField] private StateManager stateManager;
     [SerializeField] private MemoryManager memoryManager;
+
+    [Header("Combat Narrative UI")]
+    [SerializeField] private TMP_Text namePlateText;
+    [SerializeField] private TMP_Text dialogueText;
+    [SerializeField] private bool clearNarrativeUiOnDialogueEnd = true;
 
     [Header("Card Reward Event")]
     [SerializeField] private CardRewardPresenter cardRewardPresenter;
@@ -85,6 +91,8 @@ public class DialogueManager : MonoBehaviour
         {
             cardRewardPresenter = FindFirstObjectByType<CardRewardPresenter>();
         }
+
+        ResolveNarrativeUiReferences();
     }
 
     public void StartDialogue(DialogueData dialogueData)
@@ -93,6 +101,8 @@ public class DialogueManager : MonoBehaviour
         {
             return;
         }
+
+        ResolveNarrativeUiReferences();
 
         if (_isActive)
         {
@@ -150,6 +160,19 @@ public class DialogueManager : MonoBehaviour
         if (cardRewardPresenter != null)
         {
             cardRewardPresenter.StopSequence();
+        }
+
+        if (clearNarrativeUiOnDialogueEnd)
+        {
+            if (namePlateText != null)
+            {
+                namePlateText.text = string.Empty;
+            }
+
+            if (dialogueText != null)
+            {
+                dialogueText.text = string.Empty;
+            }
         }
 
         SetPlayerInputEnabled(true);
@@ -229,6 +252,16 @@ public class DialogueManager : MonoBehaviour
         }
 
         string speaker = string.IsNullOrWhiteSpace(_currentNode.speakerName) ? "Narrator" : _currentNode.speakerName;
+        if (namePlateText != null)
+        {
+            namePlateText.text = speaker;
+        }
+
+        if (dialogueText != null)
+        {
+            dialogueText.text = _currentNode.textContent ?? string.Empty;
+        }
+
         Debug.Log($"[{speaker}] {_currentNode.textContent}");
         OnDialogueLineShown?.Invoke(_currentNode);
     }
@@ -355,6 +388,33 @@ public class DialogueManager : MonoBehaviour
             if (string.Equals(candidate.sequenceId, sequenceId, StringComparison.OrdinalIgnoreCase))
             {
                 return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private void ResolveNarrativeUiReferences()
+    {
+        if (namePlateText == null)
+        {
+            namePlateText = FindTextByName("NamePlate");
+        }
+
+        if (dialogueText == null)
+        {
+            dialogueText = FindTextByName("DialogueText");
+        }
+    }
+
+    private static TMP_Text FindTextByName(string objectName)
+    {
+        TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (string.Equals(texts[i].name, objectName, StringComparison.OrdinalIgnoreCase))
+            {
+                return texts[i];
             }
         }
 

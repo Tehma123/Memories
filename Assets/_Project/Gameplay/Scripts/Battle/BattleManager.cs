@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using System;
 using System.Collections.Generic;
 
@@ -10,6 +11,9 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private MemoryManager memoryManager;
     [SerializeField] private GameObject playerObject;
     [SerializeField] private Transform[] enemySlots = Array.Empty<Transform>();
+    [SerializeField] private EnemyData[] encounterEnemies = Array.Empty<EnemyData>();
+    [SerializeField] private bool autoStartEncounterOnStart = true;
+    [SerializeField] private Button endTurnButton;
     [SerializeField] private bool useFixedSeed;
     [SerializeField] private int fixedSeed;
 
@@ -48,6 +52,51 @@ public class BattleManager : MonoBehaviour
         {
             memoryManager = FindFirstObjectByType<MemoryManager>();
         }
+
+        if (endTurnButton == null)
+        {
+            endTurnButton = FindEndTurnButton();
+        }
+    }
+
+    private void OnEnable()
+    {
+        if (endTurnButton != null)
+        {
+            endTurnButton.onClick.AddListener(HandleEndTurnButtonClicked);
+        }
+    }
+
+    private void Start()
+    {
+        UpdateEndTurnButtonState();
+
+        if (!autoStartEncounterOnStart)
+        {
+            return;
+        }
+
+        if (encounterEnemies == null || encounterEnemies.Length == 0)
+        {
+            Debug.LogWarning("BattleManager auto start is enabled, but no encounterEnemies are configured.");
+            return;
+        }
+
+        StartEncounter(encounterEnemies);
+    }
+
+    private void OnDisable()
+    {
+        if (endTurnButton != null)
+        {
+            endTurnButton.onClick.RemoveListener(HandleEndTurnButtonClicked);
+        }
+    }
+
+    [ContextMenu("Start Configured Encounter")]
+    private void StartConfiguredEncounter()
+    {
+        StartEncounter(encounterEnemies);
     }
 
     public void StartEncounter(EnemyData[] enemies)
@@ -55,6 +104,7 @@ public class BattleManager : MonoBehaviour
         if (deckManager == null || actionQueue == null)
         {
             Debug.LogError("BattleManager missing DeckManager or ActionQueue reference.");
+            UpdateEndTurnButtonState();
             return;
         }
 
@@ -80,6 +130,7 @@ public class BattleManager : MonoBehaviour
 
         OnEncounterStarted?.Invoke(_context);
         StartTurn();
+        UpdateEndTurnButtonState();
     }
 
     public void StartTurn()
@@ -108,6 +159,7 @@ public class BattleManager : MonoBehaviour
         deckManager.DrawForTurn();
 
         OnTurnStarted?.Invoke(_context.TurnNumber);
+        UpdateEndTurnButtonState();
     }
 
     public void EndTurn()
@@ -117,8 +169,14 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
+        if (!_context.IsPlayerTurn)
+        {
+            return;
+        }
+
         ResolveQueue();
         _context.IsPlayerTurn = false;
+        UpdateEndTurnButtonState();
 
         RunEnemyTurn();
         stateManager?.TickTurnEnd();
@@ -165,6 +223,7 @@ public class BattleManager : MonoBehaviour
         }
 
         _isResolvingQueue = false;
+        UpdateEndTurnButtonState();
     }
 
     public void EndEncounter()
@@ -287,6 +346,7 @@ public class BattleManager : MonoBehaviour
         }
 
         _activeEnemies.Clear();
+        UpdateEndTurnButtonState();
     }
 
     private void EndEncounterInternal(bool playerWon)
@@ -299,5 +359,36 @@ public class BattleManager : MonoBehaviour
         _encounterActive = false;
         actionQueue?.Clear();
         OnEncounterEnded?.Invoke(playerWon);
+        UpdateEndTurnButtonState();
+    }
+
+    private void HandleEndTurnButtonClicked()
+    {
+        EndTurn();
+    }
+
+    private void UpdateEndTurnButtonState()
+    {
+        if (endTurnButton == null)
+        {
+            return;
+        }
+
+        bool canInteract = _encounterActive && _context != null && _context.IsPlayerTurn && !_isResolvingQueue;
+        endTurnButton.interactable = canInteract;
+    }
+
+    private static Button FindEndTurnButton()
+    {
+        Button[] buttons = FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (string.Equals(buttons[i].name, "EndTurnButton", StringComparison.OrdinalIgnoreCase))
+            {
+                return buttons[i];
+            }
+        }
+
+        return null;
     }
 }

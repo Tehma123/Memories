@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 using System;
 using System.Collections.Generic;
 
@@ -6,6 +7,10 @@ public class MemoryManager : MonoBehaviour
 {
     [SerializeField] private float startingMemoryPercent = 100f;
     [SerializeField] private float maxMemoryPercent = 100f;
+
+    [Header("Combat UI")]
+    [SerializeField] private RectTransform memBarFill;
+    [SerializeField] private TMP_Text memBarLabel;
 
     private readonly HashSet<string> _unlockedFragments = new HashSet<string>();
     private bool _gameOverHandled;
@@ -26,6 +31,7 @@ public class MemoryManager : MonoBehaviour
 
     private void Awake()
     {
+        ResolveCombatUiReferences();
         Initialize();
     }
 
@@ -34,11 +40,13 @@ public class MemoryManager : MonoBehaviour
         float clamped = Mathf.Clamp(valuePercent, 0f, Mathf.Max(0f, maxMemoryPercent));
         if (Mathf.Approximately(CurrentMemoryPercent, clamped))
         {
+            UpdateCombatUi();
             return;
         }
 
         CurrentMemoryPercent = clamped;
         OnMemoryChanged?.Invoke(CurrentMemoryPercent);
+        UpdateCombatUi();
 
         if (CurrentMemoryPercent <= 0f)
         {
@@ -109,5 +117,64 @@ public class MemoryManager : MonoBehaviour
         _gameOverHandled = true;
         OnMemoryDepleted?.Invoke();
         Debug.LogWarning("Memory depleted. Game over flow should be handled by listeners.");
+    }
+
+    private void ResolveCombatUiReferences()
+    {
+        if (memBarFill == null)
+        {
+            memBarFill = FindRectTransformByName("MemBar_Fill");
+        }
+
+        if (memBarLabel == null)
+        {
+            memBarLabel = FindTextByName("MemBar_Label");
+        }
+    }
+
+    private void UpdateCombatUi()
+    {
+        float max = MaxMemoryPercent;
+        float normalized = max <= 0f ? 0f : Mathf.Clamp01(CurrentMemoryPercent / max);
+
+        if (memBarFill != null)
+        {
+            Vector2 anchorMax = memBarFill.anchorMax;
+            anchorMax.x = normalized;
+            memBarFill.anchorMax = anchorMax;
+        }
+
+        if (memBarLabel != null)
+        {
+            memBarLabel.text = $"{Mathf.RoundToInt(CurrentMemoryPercent)}/{Mathf.RoundToInt(max)}";
+        }
+    }
+
+    private static RectTransform FindRectTransformByName(string objectName)
+    {
+        RectTransform[] rects = FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < rects.Length; i++)
+        {
+            if (string.Equals(rects[i].name, objectName, StringComparison.OrdinalIgnoreCase))
+            {
+                return rects[i];
+            }
+        }
+
+        return null;
+    }
+
+    private static TMP_Text FindTextByName(string objectName)
+    {
+        TMP_Text[] texts = FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < texts.Length; i++)
+        {
+            if (string.Equals(texts[i].name, objectName, StringComparison.OrdinalIgnoreCase))
+            {
+                return texts[i];
+            }
+        }
+
+        return null;
     }
 }
