@@ -55,6 +55,9 @@ public class CardData : ScriptableObject
 	public string displayName = "New Card";
 	public CardType type = CardType.Attack;
 
+	[Header("Presentation")]
+	public GameObject cardPrefabOverride;
+
 	[Range(0, 100)]
 	public int costPercentage = 0;
 

@@ -299,35 +299,36 @@ public class BattleManager : MonoBehaviour
 
     private EnemyController CreateEnemyController(EnemyData enemyData, int index, Transform slot)
     {
-        if (enemyData.enemyPrefab != null)
+        GameObject enemyObject = new GameObject($"Enemy_{index}_{enemyData.displayName}", typeof(RectTransform), typeof(Image));
+        Transform parent = slot != null ? slot : transform;
+        enemyObject.transform.SetParent(parent, false);
+
+        RectTransform rectTransform = enemyObject.GetComponent<RectTransform>();
+        if (slot is RectTransform)
         {
-            Vector3 spawnPosition = slot != null ? slot.position : transform.position + Vector3.right * (index * 2f);
-            Quaternion spawnRotation = slot != null ? slot.rotation : Quaternion.identity;
-            Transform parent = slot != null ? slot : transform;
-
-            GameObject spawnedEnemy = Instantiate(enemyData.enemyPrefab, spawnPosition, spawnRotation, parent);
-            EnemyController controller = spawnedEnemy.GetComponent<EnemyController>();
-            if (controller == null)
-            {
-                controller = spawnedEnemy.AddComponent<EnemyController>();
-            }
-
-            return controller;
-        }
-
-        GameObject fallback = new GameObject($"Enemy_{index}_{enemyData.displayName}");
-        if (slot != null)
-        {
-            fallback.transform.SetPositionAndRotation(slot.position, slot.rotation);
-            fallback.transform.SetParent(slot, true);
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.offsetMin = Vector2.zero;
+            rectTransform.offsetMax = Vector2.zero;
         }
         else
         {
-            fallback.transform.position = transform.position + Vector3.right * (index * 2f);
-            fallback.transform.SetParent(transform, true);
+            rectTransform.localPosition = Vector3.zero;
+            rectTransform.localScale = Vector3.one;
+            rectTransform.sizeDelta = new Vector2(100f, 100f);
         }
 
-        return fallback.AddComponent<EnemyController>();
+        Image image = enemyObject.GetComponent<Image>();
+        image.raycastTarget = false;
+        image.preserveAspect = true;
+        image.sprite = enemyData.enemySprite;
+
+        if (image.sprite == null)
+        {
+            Debug.LogWarning($"Enemy '{enemyData.displayName}' has no sprite assigned. Set Enemy Sprite in EnemyData.");
+        }
+
+        return enemyObject.AddComponent<EnemyController>();
     }
 
     private void ResetEncounterState()

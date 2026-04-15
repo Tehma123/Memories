@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e392003349bfbbc459a8bb9994044c45, type: 3}
+  m_Name: Pain
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
+  cardID: pain
+  displayName: Pain
+  type: 0
+  cardPrefabOverride: {fileID: 1161671543182307611, guid: 99dad765ba7c9f647853bc40430bff3f, type: 3}
+  costPercentage: 15
+  effects:
+  - effectType: 0
+    flatValue: 30
+    multiplier: 0
+    statusId: 
+    durationTurns: 0
+    targetScope: 0
+    conditionKey: 
+  flavorText: 
+  sprite1Bit: {fileID: -5084580402126105551, guid: 725a4ed779f744e41b379351d62c4d4f, type: 3}

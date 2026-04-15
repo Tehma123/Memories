@@ -290,7 +290,7 @@ public class DeckManager : MonoBehaviour
 
     private void RebuildHandView()
     {
-        if (cardPrefab == null || cardHand == null)
+        if (cardHand == null)
         {
             return;
         }
@@ -305,11 +305,27 @@ public class DeckManager : MonoBehaviour
                 continue;
             }
 
-            GameObject cardInstance = Instantiate(cardPrefab, cardHand);
+            GameObject prefabToSpawn = ResolvePrefabForCard(card);
+            if (prefabToSpawn == null)
+            {
+                continue;
+            }
+
+            GameObject cardInstance = Instantiate(prefabToSpawn, cardHand);
             cardInstance.name = $"Card_{card.displayName}_{i + 1}";
             BindCardPrefab(cardInstance, card);
             _spawnedHandCards.Add(cardInstance);
         }
+    }
+
+    private GameObject ResolvePrefabForCard(CardData cardData)
+    {
+        if (cardData != null && cardData.cardPrefabOverride != null)
+        {
+            return cardData.cardPrefabOverride;
+        }
+
+        return cardPrefab;
     }
 
     private void ClearSpawnedHandCards()
@@ -342,42 +358,116 @@ public class DeckManager : MonoBehaviour
             return;
         }
 
-        Image backgroundImage = FindNamedComponent<Image>(cardInstance.transform, "CardBackground");
+        Image backgroundImage = FindFirstNamedComponent<Image>(
+            cardInstance.transform,
+            "CardBackground",
+            "Background",
+            "CardBG",
+            "BG");
         if (backgroundImage != null && cardData.sprite1Bit != null)
         {
             backgroundImage.sprite = cardData.sprite1Bit;
         }
 
-        Image cardArt = FindNamedComponent<Image>(cardInstance.transform, "CardArt");
+        Image cardArt = FindFirstNamedComponent<Image>(
+            cardInstance.transform,
+            "CardArt",
+            "Art",
+            "Illustration",
+            "Icon");
         if (cardArt != null)
         {
             cardArt.sprite = cardData.sprite1Bit;
             cardArt.enabled = cardData.sprite1Bit != null;
         }
 
-        TMP_Text costLabel = FindNamedComponent<TMP_Text>(cardInstance.transform, "CostLabel");
+        TMP_Text costLabel = FindFirstNamedComponent<TMP_Text>(
+            cardInstance.transform,
+            "CostLabel",
+            "Cost",
+            "ManaCost");
         if (costLabel != null)
         {
             costLabel.text = $"{Mathf.Clamp(cardData.costPercentage, 0, 100)}%";
         }
 
-        TMP_Text cardName = FindNamedComponent<TMP_Text>(cardInstance.transform, "CardName");
+        TMP_Text cardName = FindFirstNamedComponent<TMP_Text>(
+            cardInstance.transform,
+            "CardName",
+            "Name",
+            "Title");
         if (cardName != null)
         {
             cardName.text = string.IsNullOrWhiteSpace(cardData.displayName) ? "Card" : cardData.displayName;
         }
 
-        TMP_Text flavorText = FindNamedComponent<TMP_Text>(cardInstance.transform, "FlavorText");
+        TMP_Text flavorText = FindFirstNamedComponent<TMP_Text>(
+            cardInstance.transform,
+            "FlavorText",
+            "Description",
+            "BodyText");
         if (flavorText != null)
         {
             flavorText.text = cardData.flavorText ?? string.Empty;
         }
 
-        Transform selectionHighlight = FindNamedTransform(cardInstance.transform, "SelectionHighlight");
+        Transform selectionHighlight = FindFirstNamedTransform(
+            cardInstance.transform,
+            "SelectionHighlight",
+            "Highlight",
+            "Selected");
         if (selectionHighlight != null)
         {
             selectionHighlight.gameObject.SetActive(false);
         }
+    }
+
+    private static T FindFirstNamedComponent<T>(Transform root, params string[] objectNames) where T : Component
+    {
+        if (root == null || objectNames == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < objectNames.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(objectNames[i]))
+            {
+                continue;
+            }
+
+            T component = FindNamedComponent<T>(root, objectNames[i]);
+            if (component != null)
+            {
+                return component;
+            }
+        }
+
+        return null;
+    }
+
+    private static Transform FindFirstNamedTransform(Transform root, params string[] objectNames)
+    {
+        if (root == null || objectNames == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < objectNames.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(objectNames[i]))
+            {
+                continue;
+            }
+
+            Transform found = FindNamedTransform(root, objectNames[i]);
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
     }
 
     private static T FindNamedComponent<T>(Transform root, string objectName) where T : Component

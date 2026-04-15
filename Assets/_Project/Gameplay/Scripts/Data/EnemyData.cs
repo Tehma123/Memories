@@ -40,7 +40,9 @@ public class EnemyData : ScriptableObject
 {
 	public string enemyID = string.Empty;
 	public string displayName = "Enemy";
-	public GameObject enemyPrefab;
+
+	[Header("Combat Visual")]
+	public Sprite enemySprite;
 
 	[Min(1)]
 	public int maxHealth = 20;

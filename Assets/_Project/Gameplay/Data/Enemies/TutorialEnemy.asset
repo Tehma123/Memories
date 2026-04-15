@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5de50d6dc8c14b6498bc5785a172650a, type: 3}
+  m_Name: TutorialEnemy
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyData
+  enemyID: Tutorial
+  displayName: Trash Can
+  enemySprite: {fileID: -309777425389272845, guid: e49c7559fddb0484ea2f2f0a656f3299, type: 3}
+  maxHealth: 25
+  aggressiveness: 30
+  moves:
+  - moveID: TrashSlam
+    displayName: Trash Slam
+    moveType: 1
+    minValue: 3
+    maxValue: 5
+    statusId: 
+    durationTurns: 1
