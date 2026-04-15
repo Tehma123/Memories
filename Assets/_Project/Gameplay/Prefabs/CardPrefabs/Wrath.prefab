@@ -65,7 +65,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: '[20]+'
+  m_text: '[25]-'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6ef9e38428fb0fd4d971b68c37310b61, type: 2}
   m_sharedMaterial: {fileID: -1776669083171458556, guid: 6ef9e38428fb0fd4d971b68c37310b61, type: 2}
@@ -202,7 +202,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -1653580178665872885, guid: ce5e510f2800dc5429a46f3ac9d9c0ee, type: 3}
+  m_Sprite: {fileID: 6582439558329452077, guid: f25a1bcaef42192428ddc186d43dba35, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -277,7 +277,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: <Euphoria>
+  m_text: <Wrath>
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6ef9e38428fb0fd4d971b68c37310b61, type: 2}
   m_sharedMaterial: {fileID: -1776669083171458556, guid: 6ef9e38428fb0fd4d971b68c37310b61, type: 2}
@@ -361,8 +361,9 @@ GameObject:
   - component: {fileID: 2982103635713438032}
   - component: {fileID: 4055523049892943327}
   - component: {fileID: 3666812371232331345}
+  - component: {fileID: -8036166018720107475}
   m_Layer: 5
-  m_Name: Card
+  m_Name: Wrath
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -440,3 +441,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &-8036166018720107475
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8422783379509351171}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e19747de3f5aca642ab2be37e372fb86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Outline
+  m_EffectColor: {r: 1, g: 1, b: 1, a: 0.5}
+  m_EffectDistance: {x: 2, y: -2}
+  m_UseGraphicAlpha: 1

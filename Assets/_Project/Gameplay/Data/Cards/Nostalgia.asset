@@ -15,7 +15,7 @@ MonoBehaviour:
   cardID: nostalgia
   displayName: Nostalgia
   type: 4
-  cardPrefabOverride: {fileID: 6881010728779879667, guid: aaccb97d0acb3fa4196dd3718eab7ccc, type: 3}
+  cardPrefabOverride: {fileID: 8422783379509351171, guid: 3bfdb73a058df6249bf245a2fd4bed91, type: 3}
   costPercentage: 5
   effects:
   - effectType: 8
@@ -26,4 +26,3 @@ MonoBehaviour:
     targetScope: 3
     conditionKey: 
   flavorText: 
-  sprite1Bit: {fileID: -5084580402126105551, guid: 725a4ed779f744e41b379351d62c4d4f, type: 3}

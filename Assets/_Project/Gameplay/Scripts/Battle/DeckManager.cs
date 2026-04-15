@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
 using System;
 using System.Collections.Generic;
@@ -13,6 +12,9 @@ public class DeckManager : MonoBehaviour
     [Header("Combat UI")]
     [SerializeField] private GameObject cardPrefab;
     [SerializeField] private Transform cardHand;
+
+    [Header("Card Presentation")]
+    [SerializeField] private bool usePrefabPresentationOnly = true;
 
     private readonly List<CardData> _drawPile = new List<CardData>();
     private readonly List<CardData> _hand = new List<CardData>();
@@ -351,34 +353,17 @@ public class DeckManager : MonoBehaviour
         _spawnedHandCards.Clear();
     }
 
-    private static void BindCardPrefab(GameObject cardInstance, CardData cardData)
+    private void BindCardPrefab(GameObject cardInstance, CardData cardData)
     {
         if (cardInstance == null || cardData == null)
         {
             return;
         }
 
-        Image backgroundImage = FindFirstNamedComponent<Image>(
-            cardInstance.transform,
-            "CardBackground",
-            "Background",
-            "CardBG",
-            "BG");
-        if (backgroundImage != null && cardData.sprite1Bit != null)
+        // Keep all visuals/text authored directly in the prefab when enabled.
+        if (usePrefabPresentationOnly)
         {
-            backgroundImage.sprite = cardData.sprite1Bit;
-        }
-
-        Image cardArt = FindFirstNamedComponent<Image>(
-            cardInstance.transform,
-            "CardArt",
-            "Art",
-            "Illustration",
-            "Icon");
-        if (cardArt != null)
-        {
-            cardArt.sprite = cardData.sprite1Bit;
-            cardArt.enabled = cardData.sprite1Bit != null;
+            return;
         }
 
         TMP_Text costLabel = FindFirstNamedComponent<TMP_Text>(

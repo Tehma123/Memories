@@ -15,7 +15,7 @@ MonoBehaviour:
   cardID: pain
   displayName: Pain
   type: 0
-  cardPrefabOverride: {fileID: 1161671543182307611, guid: 99dad765ba7c9f647853bc40430bff3f, type: 3}
+  cardPrefabOverride: {fileID: 8422783379509351171, guid: 4e091ee48cdc6234598388949f3076c0, type: 3}
   costPercentage: 15
   effects:
   - effectType: 0
@@ -26,4 +26,3 @@ MonoBehaviour:
     targetScope: 0
     conditionKey: 
   flavorText: 
-  sprite1Bit: {fileID: -5084580402126105551, guid: 725a4ed779f744e41b379351d62c4d4f, type: 3}

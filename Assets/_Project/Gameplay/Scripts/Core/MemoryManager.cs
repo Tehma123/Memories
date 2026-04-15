@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using System;
 using System.Collections.Generic;
+using UnityEngine.UI;
 
 public class MemoryManager : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class MemoryManager : MonoBehaviour
 
     [Header("Combat UI")]
     [SerializeField] private RectTransform memBarFill;
+    [SerializeField] private Image memBarFillImage;
     [SerializeField] private TMP_Text memBarLabel;
 
     private readonly HashSet<string> _unlockedFragments = new HashSet<string>();
@@ -126,6 +128,21 @@ public class MemoryManager : MonoBehaviour
             memBarFill = FindRectTransformByName("MemBar_Fill");
         }
 
+        if (memBarFillImage == null && memBarFill != null)
+        {
+            memBarFillImage = memBarFill.GetComponent<Image>();
+        }
+
+        if (memBarFillImage == null)
+        {
+            memBarFillImage = FindImageByName("MemBar_Fill");
+        }
+
+        if (memBarFill == null && memBarFillImage != null)
+        {
+            memBarFill = memBarFillImage.rectTransform;
+        }
+
         if (memBarLabel == null)
         {
             memBarLabel = FindTextByName("MemBar_Label");
@@ -137,7 +154,14 @@ public class MemoryManager : MonoBehaviour
         float max = MaxMemoryPercent;
         float normalized = max <= 0f ? 0f : Mathf.Clamp01(CurrentMemoryPercent / max);
 
-        if (memBarFill != null)
+        bool usesFilledImage = memBarFillImage != null && memBarFillImage.type == Image.Type.Filled;
+
+        if (usesFilledImage)
+        {
+            memBarFillImage.fillAmount = normalized;
+        }
+
+        if (!usesFilledImage && memBarFill != null)
         {
             Vector2 anchorMax = memBarFill.anchorMax;
             anchorMax.x = normalized;
@@ -172,6 +196,20 @@ public class MemoryManager : MonoBehaviour
             if (string.Equals(texts[i].name, objectName, StringComparison.OrdinalIgnoreCase))
             {
                 return texts[i];
+            }
+        }
+
+        return null;
+    }
+
+    private static Image FindImageByName(string objectName)
+    {
+        Image[] images = FindObjectsByType<Image>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < images.Length; i++)
+        {
+            if (string.Equals(images[i].name, objectName, StringComparison.OrdinalIgnoreCase))
+            {
+                return images[i];
             }
         }
 

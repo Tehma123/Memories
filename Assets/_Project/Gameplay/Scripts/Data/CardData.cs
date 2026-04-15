@@ -66,8 +66,6 @@ public class CardData : ScriptableObject
 	[TextArea]
 	public string flavorText = string.Empty;
 
-	public Sprite sprite1Bit;
-
 	public int GetMemoryCost(int maxMemory)
 	{
 		if (maxMemory <= 0 || costPercentage <= 0)

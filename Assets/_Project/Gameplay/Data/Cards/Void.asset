@@ -15,7 +15,7 @@ MonoBehaviour:
   cardID: void
   displayName: Void
   type: 3
-  cardPrefabOverride: {fileID: 7337718901840953128, guid: 9febe4384590df745b3d06b47a951e43, type: 3}
+  cardPrefabOverride: {fileID: 8422783379509351171, guid: f1b86717bca765949a9dcf7a3723738e, type: 3}
   costPercentage: 10
   effects:
   - effectType: 4
@@ -26,4 +26,3 @@ MonoBehaviour:
     targetScope: 1
     conditionKey: 
   flavorText: 
-  sprite1Bit: {fileID: -5084580402126105551, guid: 725a4ed779f744e41b379351d62c4d4f, type: 3}
