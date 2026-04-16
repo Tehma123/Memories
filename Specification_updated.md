@@ -57,48 +57,62 @@
 
 ---
 
-## Hệ thống thẻ (Cards)
+## Combat Design cập nhật (2026-04-16)
 
-Mỗi thẻ là một `ScriptableObject` (`CardData`) chứa: `CardType`, `Cost` (ký ức), `Effect`, `FlavorText`, `Sprite1bit`.
+### 1. Triết lý thiết kế cốt lõi
 
-- Thẻ mẫu:
-  - **ĐAU THƯƠNG (Pain)** — Type: Attack; Cost: 15; Effect: 30 DMG (x2 nếu target có "U buồn"); Art: giọt lệ + kiếm gãy.
-  - **HỤT HẪNG (Void)** — Type: Control; Cost: 10; Effect: Enemy "Lost" (skip next turn); Player: no draw next turn.
-  - **VUI VẺ (Euphoria)** — Type: Support; Cost: 0 (special); Effect: Restore 20 Memory; Exile after use.
-  - **GIẬN DỮ (Wrath)** — Type: Skill; Cost: 25; Effect: 10 AoE DMG; Buff +5 attack to cards in hand.
-  - **HOÀI NIỆM (Nostalgia)** — Type: Utility; Cost: 5; Effect: Return 1 card from Discard to hand.
+- **Tài nguyên duy nhất (Memory):** Memory là tài nguyên trung tâm, đồng thời là HP và Mana. Khi Memory về 0, người chơi thua trận.
+- **Sự đánh đổi:** Mọi hành động chiến đấu đều trả bằng sự sinh tồn. Đánh thẻ hoặc bỏ lượt để rút đều làm giảm Memory.
+- **Thẩm mỹ 1-bit:** Truyền tải cảm xúc bằng tương phản cao, dithering và glitch thay cho màu sắc phong phú.
 
----
+### 2. Hệ thống thẻ bài (Card System)
 
-## Cấu trúc màn hình chiến đấu (Battle Scene Layout)
+- **Bộ bài khởi đầu gồm 5 thẻ trụ cột:**
+  - **ĐAU THƯƠNG (Pain):** tấn công đơn mục tiêu, mạnh hơn khi target có trạng thái `U buồn`.
+  - **HỤT HẪNG (Void):** khống chế, áp trạng thái `Lost` để làm chậm hoặc ngắt nhịp lượt của địch.
+  - **VUI VẺ (Euphoria):** hồi phục Memory, thiên về giữ nhịp sống còn.
+  - **GIẬN DỮ (Wrath):** kỹ năng diện rộng, đẩy nhịp combat và tạo áp lực lên nhiều mục tiêu.
+  - **HOÀI NIỆM (Nostalgia):** tiện ích, tái sử dụng tài nguyên từ discard để setup lượt sau.
+- **Cơ chế chi phí theo % MaxMemory:**
+  - Chi phí thẻ dùng `costPercentage` theo MaxMemory để giữ độ khó ổn định xuyên suốt game.
+  - Công thức: `memoryCost = ceil(playerMaxMemory * costPercentage / 100)`.
+- **Combo theo trạng thái cảm xúc (States):**
+  - Resolver thẻ kiểm tra trạng thái như `U buồn`, `Lost` để nhân sát thương, kéo dài khống chế hoặc mở rộng hiệu ứng.
+  - Các combo state được ưu tiên để tạo chiều sâu chiến thuật thay vì tăng chỉ số thuần túy.
 
-- **3 tầng dọc:**
-  - Tầng trên: Enemy sprites + narrative text-box.
-  - Tầng giữa: Card area (5 cards visible).
-  - Tầng dưới: Player avatar + Memory bar (HP/energy).
+### 3. Cơ chế rút bài & bỏ lượt (Forget to Remember)
 
----
+- **Giới hạn tay bài:** tối đa 5 lá.
+- **Không tự động rút bài mỗi lượt:** bắt đầu turn không có draw mặc định.
+- **Skip to Draw (bỏ lượt để rút):**
+  1. Người chơi chọn bỏ lượt để tìm lá mới.
+  2. Trả Memory theo `skipDrawCostPercentage` (tính theo % MaxMemory, cùng triết lý với cost thẻ).
+  3. Nếu tay < 5 lá: rút 1 lá.
+  4. Nếu tay = 5 lá: buộc chọn discard 1 lá cũ, sau đó rút 1 lá mới.
+  5. Kết thúc lượt người chơi, chuyển sang lượt địch.
+- **Ý nghĩa chiến thuật:** buộc người chơi cân nhắc giữa tấn công ngay hoặc chấp nhận chịu đòn để tái cấu trúc tay bài.
 
-## Core mechanics
+### 4. Bố cục và hiệu ứng thị giác (UI/VFX)
 
-- **Memory ()**: Tài nguyên chính — HP & Mana. 0 = Game Over.
-- **Action-Driven States**: Dùng thẻ áp ngay trạng thái (buff/debuff, skip draw).
-- **DeckManager**: Draw, Discard, Exile logic.
-- **StateManager**: Quản lý trạng thái kéo dài.
+- **Bố cục 3 tầng dọc:**
+  - Tầng trên: enemy + narrative text-box.
+  - Tầng giữa: khu vực hiển thị 5 lá bài trên tay.
+  - Tầng dưới: avatar người chơi + thanh Memory.
+- **Hiệu ứng 1-bit đặc trưng:**
+  - **Invert:** đảo màu khi bị trúng đòn hoặc hover vào thẻ.
+  - **Glitch/Shake:** rung + nhiễu khi Memory thấp (ví dụ dưới ngưỡng cảnh báo).
+  - **Dithering Dissolve:** hiệu ứng tan điểm ảnh khi lá bị discard.
 
----
+### 5. Cấu trúc kỹ thuật (Backend Logic)
 
-## Visual & Audio
+- **Action Pipeline:** mọi hành động được đưa vào `ActionQueue` và resolve theo thứ tự để tránh race condition.
+- **Damage deterministic:** sát thương tính từ `BaseDamage`, multiplier từ buff/debuff và defense mục tiêu theo công thức cố định, không dùng variance ngẫu nhiên ở combat loop chính.
+- **Event Bus đồng bộ hệ thống:** bắn các event trọng tâm như `OnCardPlayed`, `OnDamageDealt`, `OnMemoryChanged` để UI, audio và log phản ứng tức thời.
 
-- Rung (shake), Flash/Invert, Dithering noise, Glitch khi Memory thấp.
-- Mid-battle dialogue: enemy lines xen kẽ lượt đánh.
+### Ghi chú narrative-combat
 
----
-
-## Narrative integration
-
-- Flavor Text cho mỗi thẻ.
-- Combat events unlock reveals / memory fragments.
+- Flavor text mỗi thẻ giữ vai trò kể chuyện song song với cơ chế.
+- Combat events có thể mở khóa memory fragments và tăng tiến độ reveal.
 
 ---
 
@@ -174,7 +188,7 @@ public interface IInteractable { void Interact(); }
 - **Use-cases (UC):**
   - **UC-01 — Play card (single-target):** chọn thẻ -> chọn mục tiêu -> xác nhận -> consume Memory -> enqueue `PlayCardAction`.
   - **UC-02 — Play card (multi-target / AoE):** chọn thẻ -> preview ảnh hưởng -> confirm -> apply effect cho tất cả target.
-  - **UC-03 — Pass / End turn early:** người chơi chủ động kết thúc pha hành động; trigger end-turn effects.
+  - **UC-03 — Skip to Draw (Forget to Remember):** người chơi bỏ lượt để rút 1 lá; nếu tay đủ 5 thì bắt buộc discard 1 lá rồi rút 1 lá mới; sau đó kết thúc lượt.
   - **UC-04 — Use non-card ability / item:** dùng ability/item (consume Memory hoặc enter cooldown), có thể ảnh hưởng draw/turn.
   - **UC-05 — Play instant / reaction card:** phản ứng ngay giữa pipeline (interrupt/counter) theo priority rules.
   - **UC-06 — Target selection cancel:** hủy chọn mục tiêu trước confirm; UI trả về state trước đó (Memory không thay đổi).
@@ -190,8 +204,8 @@ public interface IInteractable { void Interact(); }
 - **Workflows (WF):**
   - **WF-01 — Encounter initialization (BattleManager.StartEncounter):** tạo `BattleContext` (deck snapshot, enemies, RNG seed), load UI, `DeckManager.DrawInitialHand()`, apply initial states.
   - **WF-02 — Turn loop (StartTurn → PlayerActionPhase → ResolvePhase → EnemyTurn → EndTurn):**
-    - `StartTurn()`: fire `OnTurnStarted`, apply start-of-turn effects, `DeckManager.DrawForTurn()`.
-    - `PlayerActionPhase()`: enable input; on `PlayCard` tạo `PlayCardAction` và `ActionQueue.Enqueue()`; validate costs on select + confirm.
+    - `StartTurn()`: fire `OnTurnStarted`, apply start-of-turn effects, **không tự động rút bài**.
+    - `PlayerActionPhase()`: enable input; on `PlayCard` tạo `PlayCardAction` và `ActionQueue.Enqueue()`; hoặc chọn `SkipToDraw` để trả Memory + xử lý draw/discard theo giới hạn tay 5 lá.
     - `ResolvePhase()`: `ActionQueue.ProcessNext()` sequentially; mỗi `IBattleAction.Resolve(ctx)` post events tới `EventBus`.
     - `EnemyTurn()`: AI tạo `IBattleAction` cho enemy; resolve bằng cùng pipeline.
     - `EndTurn()`: fire `OnTurnEnd`, giảm durations, apply end-turn triggers.
@@ -321,9 +335,9 @@ public interface IInteractable { void Interact(); }
      - `string sourceId`
 
 4. **OnTurnStarted**
-   - **Khi phát sinh:** bắt đầu turn của player hoặc enemy, trước draw/start-of-turn effects.
-   - **Publisher:** `BattleManager`.
-   - **Payload:**
+  - **Khi phát sinh:** bắt đầu turn của player hoặc enemy, trước start-of-turn effects (combat loop không có auto-draw).
+  - **Publisher:** `BattleManager`.
+  - **Payload:**
      - `string battleId`
      - `int turnNumber`
      - `string side` (`Player` hoặc `Enemy`)
@@ -518,7 +532,7 @@ Assets/_Project/Gameplay/Scripts/
 
 ## Math Formulas — Damage Calculation
 
-- **Mục tiêu:** rõ ràng, cân bằng được, deterministic theo seed.
+- **Mục tiêu:** rõ ràng, cân bằng được, deterministic (không dùng variance ngẫu nhiên trong combat loop).
 
 ### Công thức khuyến nghị
 
@@ -528,7 +542,6 @@ Gọi:
 - $M_a$: attacker multiplier (ví dụ Wrath, card synergy).
 - $M_t$: target taken-damage multiplier (ví dụ Vulnerable/Guard).
 - $R$: defense mitigation theo công thức mềm.
-- $V$: random variance deterministic từ seed (khuyên dùng $0.95 \le V \le 1.05$).
 - $S$: flat shield của target.
 
 $$
@@ -536,7 +549,7 @@ R = \frac{Defense}{Defense + K} \quad (K = 100 \text{ mặc định})
 $$
 
 $$
-Raw = (B + A_f) \times M_a \times M_t \times (1 - R) \times V
+Raw = (B + A_f) \times M_a \times M_t \times (1 - R)
 $$
 
 $$
@@ -545,14 +558,14 @@ $$
 
 ### Rule notes
 
-- Crit (nếu có): nhân vào $M_a$ trước bước mitigation.
+- Crit ngẫu nhiên bị tắt trong bản combat loop hiện tại; mọi modifier đến từ state/buff/debuff xác định được.
 - Hiệu ứng đặc biệt card (ví dụ Pain x2 khi target có trạng thái "U buồn") được cộng vào $M_a$.
 - Clamp toàn bộ multiplier trong khoảng hợp lệ để tránh overflow/one-shot ngoài ý muốn.
 - Emit `OnDamageDealt` với cả `baseDamage`, `totalMultiplier`, `finalDamage` để debug balance.
 
 ### Ví dụ nhanh
 
-- Card Pain: $B=30$, attacker buff +10% -> $M_a=1.1$, target Vulnerable +25% -> $M_t=1.25$, defense=50, $K=100$, variance $V=1.0$, shield $S=2$.
+- Card Pain: $B=30$, attacker buff +10% -> $M_a=1.1$, target Vulnerable +25% -> $M_t=1.25$, defense=50, $K=100$, shield $S=2$.
 
 $$
 R = 50/(50+100)=0.333
@@ -612,15 +625,42 @@ $$
 - Chưa có `EventBus` typed events riêng như phần thiết kế chi tiết; hiện chủ yếu dùng C# events trực tiếp trong từng manager.
 - Chưa có `GameStateMachine` trung tâm tách bạch `Exploration/Dialogue/Battle/Vignette` theo state stack.
 - Scene battle additive (`LoadSceneMode.Additive`) chưa được wire đầy đủ; flow hiện tại chủ yếu là scene transition trực tiếp.
+- Chưa có luồng nối dữ liệu enemy từ exploration encounter vào combat scene (enemy spawn hiện chưa lấy trực tiếp từ enemy ngoài map).
+- Chưa có quy tắc rõ ràng để xác định số lượng enemy được mang vào combat từ exploration (thiết kế mục tiêu: tối đa 3 slot enemy).
+- Chưa xử lý đầy đủ các trạng thái combat lifecycle gồm `Victory`, `Paused`, `Defeated` và `Restart` trong cùng flow điều hướng/UI.
 - Save system JSON schema trong tài liệu đang ở mức design; chưa thấy implementation save/load runtime trong scripts hiện có.
 
 ---
 
 ## Implementation notes & next steps
 
-- Create SO samples for the 5 cards.
-- Build UI prefabs for 3-tier battle layout.
-- Add unit tests for `DeckManager` and `MemoryManager`.
+- **Checklist A — Nối enemy từ exploration sang combat scene**
+  - [ ] Tạo `EncounterPayload` (hoặc `BattleStartContext`) chứa: `encounterId`, danh sách `enemyId`, optional `enemyLevel`, optional `spawnPattern`, `rngSeed`.
+  - [ ] Bổ sung `SceneTransitionContext` để set payload khi trigger encounter từ exploration trước khi load battle.
+  - [ ] Tạo `BattleSceneBootstrap` đọc payload khi vào battle scene, resolve sang `EnemyData` thực tế và inject vào `BattleManager.StartEncounter(...)`.
+  - [ ] Áp dụng cơ chế consume-once cho payload để tránh reuse sai ở trận kế tiếp.
+  - [ ] Nếu payload lỗi/thiếu dữ liệu, fallback về encounter mặc định + log cảnh báo có `encounterId`.
+
+- **Checklist B — Quy tắc số lượng enemy vào trận (tối đa 3 slot)**
+  - [ ] Định nghĩa hằng `MaxEnemySlots = 3` trong combat config dùng chung.
+  - [ ] Chuẩn hoá rule mapping: danh sách enemy từ exploration được clamp trong khoảng 1..3 theo thứ tự xuất hiện.
+  - [ ] Thiết kế `EnemySlotLayout` cố định `slot1/slot2/slot3` để UI, target selector và spawn position thống nhất.
+  - [ ] Khi encounter có nhiều hơn 3 enemy, áp dụng policy rõ ràng: cắt bớt theo priority (mini-boss > elite > normal) hoặc theo thứ tự proximity.
+  - [ ] Bổ sung event `OnEncounterResolved` để log số enemy nguồn và số enemy thực vào battle.
+
+- **Checklist C — Combat lifecycle: Victory, Paused, Defeated, Restart**
+  - [ ] Tạo state machine vòng đời combat (ví dụ `CombatFlowState`): `Init`, `PlayerTurn`, `EnemyTurn`, `Resolve`, `Paused`, `Victory`, `Defeated`, `Restarting`.
+  - [ ] Implement `Pause/Resume`: khóa input hành động, dừng xử lý `ActionQueue`, đóng băng timer/animation gameplay (UI pause menu vẫn hoạt động).
+  - [ ] Implement `Victory`: khóa input combat, phát sequence thắng, cấp reward, trigger save/checkpoint, trả về exploration theo flow chuẩn.
+  - [ ] Implement `Defeated`: hiển thị màn hình thua với lựa chọn `Restart`, `LoadCheckpoint`, `QuitToMenu`.
+  - [ ] Implement `Restart`: reset battle context theo seed/payload của encounter hiện tại, clear state tạm, đảm bảo không carry-over buff/debuff không hợp lệ.
+  - [ ] Publish đầy đủ events: `OnCombatPaused`, `OnCombatResumed`, `OnCombatVictory`, `OnCombatDefeated`, `OnCombatRestarted`.
+
+- **Checklist D — Test & acceptance criteria cho 3 hạng mục trên**
+  - [ ] Test integration: từ exploration trigger encounter -> battle scene spawn đúng dữ liệu enemy.
+  - [ ] Test boundary: 0, 1, 2, 3, >3 enemy input để xác nhận clamp/policy hoạt động đúng.
+  - [ ] Test lifecycle: pause/resume không làm mất thứ tự resolve; victory và defeated đi đúng flow; restart reset đúng context.
+  - [ ] Test persistence: sau victory có checkpoint/save đúng; restart không ghi đè save ngoài ý muốn.
 
 ---
 
