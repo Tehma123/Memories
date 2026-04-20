@@ -26,3 +26,8 @@ MonoBehaviour:
     targetScope: 0
     conditionKey: 
   flavorText: 
+  combatEffectLines:
+  - A shard of memory cuts deep.
+  - Old rain returns with iron taste.
+  - The wound remembers your name.
+  - Pain speaks louder than reason.

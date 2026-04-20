@@ -10,7 +10,14 @@ public static class SceneTransitionContext
     private static string _destinationEntryPointId = string.Empty;
     private static bool _hasPendingTransition;
 
-    public static void LoadScene(string destinationSceneName, string destinationEntryPointId = "")
+    private static string _encounterPayloadSceneName = string.Empty;
+    private static EncounterPayload _encounterPayload;
+    private static bool _hasPendingEncounterPayload;
+
+    public static void LoadScene(
+        string destinationSceneName,
+        string destinationEntryPointId = "",
+        EncounterPayload encounterPayload = null)
     {
         if (string.IsNullOrWhiteSpace(destinationSceneName))
         {
@@ -19,6 +26,7 @@ public static class SceneTransitionContext
         }
 
         SetPendingTransition(destinationSceneName, destinationEntryPointId);
+        SetPendingEncounterPayload(destinationSceneName, encounterPayload);
 
         if (!SceneTransitionFader.TryLoadSceneWithFade(destinationSceneName))
         {
@@ -57,6 +65,45 @@ public static class SceneTransitionContext
         entryPointId = _destinationEntryPointId;
         ClearPendingTransition();
         return true;
+    }
+
+    public static void SetPendingEncounterPayload(string destinationSceneName, EncounterPayload payload)
+    {
+        if (payload == null || string.IsNullOrWhiteSpace(destinationSceneName))
+        {
+            ClearPendingEncounterPayload();
+            return;
+        }
+
+        _encounterPayloadSceneName = destinationSceneName.Trim();
+        _encounterPayload = payload.Clone();
+        _hasPendingEncounterPayload = true;
+    }
+
+    public static void ClearPendingEncounterPayload()
+    {
+        _encounterPayloadSceneName = string.Empty;
+        _encounterPayload = null;
+        _hasPendingEncounterPayload = false;
+    }
+
+    public static bool TryConsumeEncounterPayloadForActiveScene(string activeSceneName, out EncounterPayload payload)
+    {
+        payload = null;
+
+        if (!_hasPendingEncounterPayload)
+        {
+            return false;
+        }
+
+        if (!string.Equals(_encounterPayloadSceneName, activeSceneName, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        payload = _encounterPayload?.Clone();
+        ClearPendingEncounterPayload();
+        return payload != null;
     }
 
     public static bool TryParseSceneAndEntry(string rawValue, out string sceneName, out string entryPointId)

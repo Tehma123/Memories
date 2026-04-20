@@ -26,3 +26,8 @@ MonoBehaviour:
     targetScope: 3
     conditionKey: 
   flavorText: 
+  combatEffectLines:
+  - Yesterday reaches from the discard.
+  - A forgotten scene plays again.
+  - You gather what you threw away.
+  - Old echoes return to your hand.

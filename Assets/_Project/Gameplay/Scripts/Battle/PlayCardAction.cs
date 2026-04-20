@@ -7,6 +7,8 @@ public class PlayCardAction : IBattleAction
     private GameObject _source;
     private GameObject _target;
 
+    public bool WasResolvedSuccessfully { get; private set; }
+
     public void Setup(CardData cardData, GameObject source, GameObject target)
     {
         _cardData = cardData;
@@ -16,6 +18,8 @@ public class PlayCardAction : IBattleAction
 
     public void Resolve(BattleContext context)
     {
+        WasResolvedSuccessfully = false;
+
         if (context == null || _cardData == null)
         {
             return;
@@ -29,8 +33,12 @@ public class PlayCardAction : IBattleAction
             return;
         }
 
+        // Played cards leave the hand immediately and are moved to discard.
+        context.DeckManager?.TryMoveCardFromHandToDiscard(_cardData);
+
         if (_cardData.effects == null)
         {
+            WasResolvedSuccessfully = true;
             return;
         }
 
@@ -44,6 +52,8 @@ public class PlayCardAction : IBattleAction
 
             ResolveEffect(context, effect);
         }
+
+        WasResolvedSuccessfully = true;
     }
 
     private void ResolveEffect(BattleContext context, EffectData effect)
@@ -54,10 +64,22 @@ public class PlayCardAction : IBattleAction
         switch (effect.effectType)
         {
             case EffectType.Damage:
+                if (targets.Count == 0)
+                {
+                    Debug.LogWarning($"Card '{_cardData.displayName}' has no valid targets for damage.");
+                    break;
+                }
+
                 for (int i = 0; i < targets.Count; i++)
                 {
-                    IDamageable damageable = targets[i].GetComponent<IDamageable>();
-                    damageable?.TakeDamage(Mathf.Max(0, value));
+                    IDamageable damageable = ResolveDamageable(targets[i]);
+                    if (damageable == null)
+                    {
+                        Debug.LogWarning($"Target '{targets[i].name}' does not implement IDamageable.");
+                        continue;
+                    }
+
+                    damageable.TakeDamage(Mathf.Max(0, value));
                 }
                 break;
 
@@ -107,8 +129,12 @@ public class PlayCardAction : IBattleAction
             case TargetScope.Single:
                 if (_target != null)
                 {
-                    targets.Add(_target);
-                    return targets;
+                    EnemyController selectedEnemy = _target.GetComponent<EnemyController>();
+                    if (selectedEnemy == null || selectedEnemy.IsAlive)
+                    {
+                        targets.Add(_target);
+                        return targets;
+                    }
                 }
 
                 EnemyController primaryEnemy = context.GetPrimaryAliveEnemy();
@@ -140,5 +166,27 @@ public class PlayCardAction : IBattleAction
         }
 
         return targets;
+    }
+
+    private static IDamageable ResolveDamageable(GameObject target)
+    {
+        if (target == null)
+        {
+            return null;
+        }
+
+        IDamageable direct = target.GetComponent<IDamageable>();
+        if (direct != null)
+        {
+            return direct;
+        }
+
+        IDamageable child = target.GetComponentInChildren<IDamageable>();
+        if (child != null)
+        {
+            return child;
+        }
+
+        return target.GetComponentInParent<IDamageable>();
     }
 }

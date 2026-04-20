@@ -26,3 +26,8 @@ MonoBehaviour:
     targetScope: 1
     conditionKey: 
   flavorText: 
+  combatEffectLines:
+  - Silence folds over every thought.
+  - The world blinks and loses shape.
+  - Names fade into static.
+  - A hollow step steals the turn.

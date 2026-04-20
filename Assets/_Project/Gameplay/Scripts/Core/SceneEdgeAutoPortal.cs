@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 
 [DisallowMultipleComponent]
 public class SceneEdgeAutoPortal : MonoBehaviour
@@ -20,6 +21,15 @@ public class SceneEdgeAutoPortal : MonoBehaviour
     [SerializeField] private float rightEdgeX = 10f;
     [SerializeField] private string rightDestinationSceneName = string.Empty;
     [SerializeField] private string rightDestinationEntryPointId = "Default";
+
+    [Header("Encounter Payload (Optional)")]
+    [SerializeField] private bool includeEncounterPayload;
+    [SerializeField] private string encounterId = string.Empty;
+    [SerializeField] private EnemyData[] encounterEnemies = Array.Empty<EnemyData>();
+    [SerializeField, Min(1)] private int encounterLevel = 1;
+    [SerializeField] private string spawnPattern = string.Empty;
+    [SerializeField] private bool overrideEncounterSeed;
+    [SerializeField] private int encounterSeed;
 
     private float _previousPlayerX;
     private bool _hasPreviousPosition;
@@ -115,8 +125,24 @@ public class SceneEdgeAutoPortal : MonoBehaviour
         }
 
         _hasTriggeredTransition = true;
-        SceneTransitionContext.LoadScene(destinationSceneName, destinationEntryPointId);
+        SceneTransitionContext.LoadScene(destinationSceneName, destinationEntryPointId, BuildEncounterPayload());
         return true;
+    }
+
+    private EncounterPayload BuildEncounterPayload()
+    {
+        if (!includeEncounterPayload)
+        {
+            return null;
+        }
+
+        int? seed = overrideEncounterSeed ? encounterSeed : (int?)null;
+        return EncounterPayload.FromEnemyData(
+            encounterId,
+            encounterEnemies,
+            encounterLevel,
+            spawnPattern,
+            seed);
     }
 
     private void TryResolvePlayerReferences()
@@ -143,5 +169,8 @@ public class SceneEdgeAutoPortal : MonoBehaviour
         leftDestinationEntryPointId = (leftDestinationEntryPointId ?? string.Empty).Trim();
         rightDestinationSceneName = (rightDestinationSceneName ?? string.Empty).Trim();
         rightDestinationEntryPointId = (rightDestinationEntryPointId ?? string.Empty).Trim();
+        encounterId = (encounterId ?? string.Empty).Trim();
+        spawnPattern = (spawnPattern ?? string.Empty).Trim();
+        encounterLevel = Mathf.Max(1, encounterLevel);
     }
 }

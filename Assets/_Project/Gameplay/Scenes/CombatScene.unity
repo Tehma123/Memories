@@ -1613,6 +1613,54 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1643603009
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1643603011}
+  - component: {fileID: 1643603010}
+  m_Layer: 0
+  m_Name: BattleSceneBootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1643603010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1643603009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 570a552270b449f4c8315544b66c5942, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleSceneBootstrap
+  battleManager: {fileID: 1794199741}
+  enemyCatalog:
+  - {fileID: 11400000, guid: 2179a10e0af6c484d916ab89fc2ebbf2, type: 2}
+  logResolutionDetails: 1
+--- !u!4 &1643603011
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1643603009}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 341.80783, y: 87.97124, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1688347171
 GameObject:
   m_ObjectHideFlags: 0
@@ -1790,7 +1838,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 4fa7a1008720f47409abd6fddfb51cc2, type: 2}
   - {fileID: 11400000, guid: 3d565b887e50b4145a11ba07a3d61458, type: 2}
   - {fileID: 11400000, guid: a9962873c2d2e3f44b9e412a0d822d9e, type: 2}
-  - {fileID: 11400000, guid: fb064b066718d354d9ab703ef42378a6, type: 2}
+  - {fileID: 11400000, guid: 62a54ee202a9b0b4abb713196135dc9a, type: 2}
   handSize: 10
   drawPerTurn: 1
   cardPrefab: {fileID: 0}
@@ -1825,6 +1873,15 @@ MonoBehaviour:
   endTurnButton: {fileID: 84115987}
   useFixedSeed: 0
   fixedSeed: 0
+  freezeGameplayTimeOnPause: 1
+  requestCheckpointSaveOnVictory: 1
+  returnToExplorationOnVictory: 0
+  victorySceneName: 
+  victoryEntryPointId: Default
+  checkpointSceneName: 
+  checkpointEntryPointId: Default
+  quitToMenuSceneName: MainMenuScene
+  quitToMenuEntryPointId: 
 --- !u!4 &1794199742
 Transform:
   m_ObjectHideFlags: 0
@@ -2018,3 +2075,4 @@ SceneRoots:
   - {fileID: 123738646}
   - {fileID: 130046781}
   - {fileID: 1794199742}
+  - {fileID: 1643603011}

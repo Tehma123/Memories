@@ -21,7 +21,7 @@ MonoBehaviour:
   - moveID: TrashSlam
     displayName: Trash Slam
     moveType: 1
-    minValue: 3
-    maxValue: 5
+    minValue: 1
+    maxValue: 2
     statusId: 
     durationTurns: 1

@@ -44,7 +44,8 @@ public class EffectData
 
 	public int GetResolvedValue()
 	{
-		return Mathf.RoundToInt(flatValue * Mathf.Max(0f, multiplier));
+		float effectiveMultiplier = multiplier <= 0f ? 1f : multiplier;
+		return Mathf.RoundToInt(flatValue * effectiveMultiplier);
 	}
 }
 
@@ -66,6 +67,9 @@ public class CardData : ScriptableObject
 	[TextArea]
 	public string flavorText = string.Empty;
 
+	[Header("Combat Effect Lines")]
+	public List<string> combatEffectLines = new List<string>();
+
 	public int GetMemoryCost(int maxMemory)
 	{
 		if (maxMemory <= 0 || costPercentage <= 0)
@@ -74,5 +78,33 @@ public class CardData : ScriptableObject
 		}
 
 		return Mathf.CeilToInt(maxMemory * Mathf.Clamp(costPercentage, 0, 100) / 100f);
+	}
+
+	public string GetRandomCombatEffectLine(System.Random random = null)
+	{
+		List<string> candidates = new List<string>();
+		for (int i = 0; i < combatEffectLines.Count; i++)
+		{
+			string line = combatEffectLines[i];
+			if (!string.IsNullOrWhiteSpace(line))
+			{
+				candidates.Add(line.Trim());
+			}
+		}
+
+		if (candidates.Count == 0)
+		{
+			if (!string.IsNullOrWhiteSpace(flavorText))
+			{
+				return flavorText.Trim();
+			}
+
+			return string.IsNullOrWhiteSpace(displayName)
+				? "Memory shivers in silence."
+				: $"{displayName} tears through memory.";
+		}
+
+		int index = random != null ? random.Next(0, candidates.Count) : UnityEngine.Random.Range(0, candidates.Count);
+		return candidates[index];
 	}
 }
