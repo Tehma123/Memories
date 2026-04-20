@@ -362,6 +362,7 @@ GameObject:
   - component: {fileID: 4055523049892943327}
   - component: {fileID: 3666812371232331345}
   - component: {fileID: 2582026261569376344}
+  - component: {fileID: -17679542558024327}
   m_Layer: 5
   m_Name: Nostalgia
   m_TagString: Untagged
@@ -456,3 +457,29 @@ MonoBehaviour:
   m_EffectColor: {r: 1, g: 1, b: 1, a: 0.5}
   m_EffectDistance: {x: 2, y: -2}
   m_UseGraphicAlpha: 1
+--- !u!114 &-17679542558024327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8422783379509351171}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 88034964ff08a2648bd8bb30a130042f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleCardView
+  hoverLighten: 0.2
+  armedLighten: 0.35
+  disabledAlpha: 0.6
+  hoverScalePercent: 103
+  armedScalePercent: 106
+  scaleTweenDuration: 0.08
+  dissolveDuration: 0.32
+  dissolveTargetScalePercent: 72
+  dissolveJitterPixels: 6
+  slotCaptionHoldDuration: 0.45
+  slotCaptionCharsPerSecond: 26
+  slotCaptionFontSize: 20
+  slotCaptionBold: 1
+  slotCaptionFont: {fileID: 11400000, guid: 6ef9e38428fb0fd4d971b68c37310b61, type: 2}

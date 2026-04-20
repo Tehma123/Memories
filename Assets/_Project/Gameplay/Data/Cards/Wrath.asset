@@ -19,7 +19,7 @@ MonoBehaviour:
   costPercentage: 25
   effects:
   - effectType: 0
-    flatValue: 10
+    flatValue: 15
     multiplier: 0
     statusId: 
     durationTurns: 0

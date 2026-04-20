@@ -19,11 +19,11 @@ MonoBehaviour:
   costPercentage: 0
   effects:
   - effectType: 1
-    flatValue: 20
+    flatValue: 30
     multiplier: 0
     statusId: 
     durationTurns: 0
-    targetScope: 1
+    targetScope: 2
     conditionKey: 
   flavorText: 
   combatEffectLines:

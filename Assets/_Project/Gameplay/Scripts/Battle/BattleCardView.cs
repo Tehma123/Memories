@@ -1,3 +1,5 @@
+using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -11,6 +13,16 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     [SerializeField, Min(1f)] private float hoverScalePercent = 103f;
     [SerializeField, Min(1f)] private float armedScalePercent = 106f;
     [SerializeField, Min(0f)] private float scaleTweenDuration = 0.08f;
+
+    [Header("Played Card Dissolve")]
+    [SerializeField, Min(0f)] private float dissolveDuration = 0.32f;
+    [SerializeField, Range(10f, 100f)] private float dissolveTargetScalePercent = 72f;
+    [SerializeField, Min(0f)] private float dissolveJitterPixels = 6f;
+    [SerializeField, Min(0f)] private float slotCaptionHoldDuration = 0.45f;
+    [SerializeField, Min(1f)] private float slotCaptionCharsPerSecond = 26f;
+    [SerializeField, Min(8f)] private float slotCaptionFontSize = 18f;
+    [SerializeField] private bool slotCaptionBold = false;
+    [SerializeField] private TMP_FontAsset slotCaptionFont;
 
     private DeckManager _owner;
     private CardData _cardData;
@@ -87,6 +99,157 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         _owner.HandleCardClicked(this);
     }
 
+    public IEnumerator PlayDissolveAndShowSlotText(string caption)
+    {
+        CancelScaleTween();
+        _isInteractable = false;
+
+        CanvasGroup workingCanvasGroup = _canvasGroup;
+        if (workingCanvasGroup == null)
+        {
+            workingCanvasGroup = gameObject.GetComponent<CanvasGroup>();
+            if (workingCanvasGroup == null)
+            {
+                workingCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+
+            _canvasGroup = workingCanvasGroup;
+        }
+
+        RectTransform rect = _rectTransform != null ? _rectTransform : transform as RectTransform;
+        Vector3 startScale = rect != null ? rect.localScale : Vector3.one;
+        Vector2 startAnchoredPosition = rect != null ? rect.anchoredPosition : Vector2.zero;
+
+        float duration = Mathf.Max(0f, dissolveDuration);
+        if (duration <= 0f)
+        {
+            workingCanvasGroup.alpha = 0f;
+            ToggleCardGraphics(false);
+        }
+        else
+        {
+            float elapsed = 0f;
+            float targetScaleFactor = Mathf.Clamp01(dissolveTargetScalePercent / 100f);
+
+            while (elapsed < duration)
+            {
+                float t = Mathf.Clamp01(elapsed / duration);
+                float easedT = 1f - ((1f - t) * (1f - t));
+                workingCanvasGroup.alpha = 1f - easedT;
+
+                if (rect != null)
+                {
+                    float scaleFactor = Mathf.LerpUnclamped(1f, targetScaleFactor, easedT);
+                    rect.localScale = startScale * scaleFactor;
+
+                    Vector2 jitter = Random.insideUnitCircle * dissolveJitterPixels * (1f - t);
+                    rect.anchoredPosition = startAnchoredPosition + jitter;
+                }
+
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            workingCanvasGroup.alpha = 0f;
+            if (rect != null)
+            {
+                rect.localScale = startScale * Mathf.Clamp01(dissolveTargetScalePercent / 100f);
+                rect.anchoredPosition = startAnchoredPosition;
+            }
+
+            ToggleCardGraphics(false);
+        }
+
+        if (string.IsNullOrWhiteSpace(caption))
+        {
+            yield break;
+        }
+
+        Transform slotRoot = transform.parent;
+        if (slotRoot == null)
+        {
+            yield break;
+        }
+
+        GameObject captionObject = new GameObject("PlayedCardCaption", typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI));
+        RectTransform captionRect = captionObject.GetComponent<RectTransform>();
+        captionRect.SetParent(slotRoot, false);
+        captionRect.anchorMin = Vector2.zero;
+        captionRect.anchorMax = Vector2.one;
+        captionRect.offsetMin = Vector2.zero;
+        captionRect.offsetMax = Vector2.zero;
+
+        CanvasGroup captionCanvasGroup = captionObject.GetComponent<CanvasGroup>();
+        captionCanvasGroup.alpha = 1f;
+
+        TextMeshProUGUI captionLabel = captionObject.GetComponent<TextMeshProUGUI>();
+        captionLabel.text = caption.Trim();
+        captionLabel.maxVisibleCharacters = 0;
+        captionLabel.alignment = TextAlignmentOptions.Center;
+        captionLabel.fontSize = slotCaptionFontSize;
+        captionLabel.fontStyle = slotCaptionBold ? FontStyles.Bold : FontStyles.Normal;
+        if (slotCaptionFont != null)
+        {
+            captionLabel.font = slotCaptionFont;
+        }
+
+        captionLabel.textWrappingMode = TextWrappingModes.Normal;
+        captionLabel.color = Color.white;
+        captionLabel.raycastTarget = false;
+        captionLabel.ForceMeshUpdate();
+
+        int visibleCharacterCount = captionLabel.textInfo.characterCount;
+        if (visibleCharacterCount <= 0)
+        {
+            visibleCharacterCount = captionLabel.text.Length;
+        }
+
+        if (visibleCharacterCount <= 0)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(captionObject);
+            }
+            else
+            {
+                DestroyImmediate(captionObject);
+            }
+
+            yield break;
+        }
+
+        float characterDelay = 1f / Mathf.Max(1f, slotCaptionCharsPerSecond);
+        for (int i = 0; i < visibleCharacterCount; i++)
+        {
+            captionLabel.maxVisibleCharacters = i + 1;
+            yield return new WaitForSecondsRealtime(characterDelay);
+        }
+
+        if (slotCaptionHoldDuration > 0f)
+        {
+            yield return new WaitForSecondsRealtime(slotCaptionHoldDuration);
+        }
+
+        float fadeElapsed = 0f;
+        const float captionFadeDuration = 0.15f;
+        while (fadeElapsed < captionFadeDuration)
+        {
+            float t = Mathf.Clamp01(fadeElapsed / captionFadeDuration);
+            captionCanvasGroup.alpha = 1f - t;
+            fadeElapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (Application.isPlaying)
+        {
+            Destroy(captionObject);
+        }
+        else
+        {
+            DestroyImmediate(captionObject);
+        }
+    }
+
     private void OnDisable()
     {
         CancelScaleTween();
@@ -152,5 +315,29 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 
         LeanTween.cancel(_activeScaleTweenId);
         _activeScaleTweenId = -1;
+    }
+
+    private void ToggleCardGraphics(bool isVisible)
+    {
+        Graphic[] graphics = GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            Graphic graphic = graphics[i];
+            if (graphic == null)
+            {
+                continue;
+            }
+
+            if (graphic.transform.IsChildOf(transform))
+            {
+                graphic.enabled = isVisible;
+            }
+        }
+
+        if (_canvasGroup != null)
+        {
+            _canvasGroup.blocksRaycasts = isVisible;
+            _canvasGroup.interactable = isVisible;
+        }
     }
 }

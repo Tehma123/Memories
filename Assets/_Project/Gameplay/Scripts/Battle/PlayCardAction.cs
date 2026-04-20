@@ -34,7 +34,7 @@ public class PlayCardAction : IBattleAction
         }
 
         // Played cards leave the hand immediately and are moved to discard.
-        context.DeckManager?.TryMoveCardFromHandToDiscard(_cardData);
+        context.DeckManager?.TryMoveCardFromHandToDiscard(_cardData, notifyHandChanged: false);
 
         if (_cardData.effects == null)
         {

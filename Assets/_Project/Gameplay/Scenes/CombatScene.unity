@@ -1839,11 +1839,16 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 3d565b887e50b4145a11ba07a3d61458, type: 2}
   - {fileID: 11400000, guid: a9962873c2d2e3f44b9e412a0d822d9e, type: 2}
   - {fileID: 11400000, guid: 62a54ee202a9b0b4abb713196135dc9a, type: 2}
-  handSize: 10
+  handSize: 5
   drawPerTurn: 1
+  basicCardPool: []
+  discardRandomWhenHandIsFullOnSkipDraw: 0
+  requireManualDiscardSelectionOnSkipDraw: 1
   cardPrefab: {fileID: 0}
   cardHand: {fileID: 845417070}
   usePrefabPresentationOnly: 1
+  emptySlotSize: {x: 120, y: 160}
+  battleManager: {fileID: 1794199741}
 --- !u!114 &1794199741
 MonoBehaviour:
   m_ObjectHideFlags: 0

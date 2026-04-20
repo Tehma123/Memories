@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.UI;
 
@@ -23,12 +24,10 @@ public class DeckManager : MonoBehaviour
 
     [Header("Card Presentation")]
     [SerializeField] private bool usePrefabPresentationOnly = true;
-    [SerializeField] private bool keepEmptyHandSlots = true;
     [SerializeField] private Vector2 emptySlotSize = new Vector2(120f, 160f);
 
     [Header("Battle Wiring")]
     [SerializeField] private BattleManager battleManager;
-    [SerializeField] private BattleCardEffectPresenter cardEffectPresenter;
 
     private readonly List<CardData> _drawPile = new List<CardData>();
     private readonly List<CardData> _hand = new List<CardData>();
@@ -37,12 +36,17 @@ public class DeckManager : MonoBehaviour
     private readonly List<CardData> _resolvedBasicPool = new List<CardData>(5);
     private readonly List<GameObject> _spawnedHandCards = new List<GameObject>();
     private readonly List<GameObject> _spawnedHandSlots = new List<GameObject>();
+    private readonly List<BattleCardView> _slotCardViews = new List<BattleCardView>();
 
     private BattleCardView _armedCardView;
     private CardData _pendingTargetCardData;
     private bool _awaitingSkipTurnDiscardSelection;
     private Action _skipTurnDiscardResolvedCallback;
     private bool _battleEventsHooked;
+    private bool _isPlayingCardConsumePresentation;
+    private bool _suppressHandRebuild;
+    private bool _pendingHandRebuild;
+    private Coroutine _playCardPresentationRoutine;
 
     private System.Random _random = new System.Random();
 
@@ -65,16 +69,26 @@ public class DeckManager : MonoBehaviour
     {
         ResolveRuntimeReferences();
         SubscribeBattleEvents();
-        OnHandChanged += RebuildHandView;
+        OnHandChanged += HandleHandChanged;
     }
 
     private void OnDisable()
     {
-        OnHandChanged -= RebuildHandView;
+        OnHandChanged -= HandleHandChanged;
         UnsubscribeBattleEvents();
         ClearArmedCardSelection();
         ClearPendingEnemyTargetSelection(false);
         ClearSkipTurnDiscardSelectionState(false);
+
+        if (_playCardPresentationRoutine != null)
+        {
+            StopCoroutine(_playCardPresentationRoutine);
+            _playCardPresentationRoutine = null;
+        }
+
+        _isPlayingCardConsumePresentation = false;
+        _suppressHandRebuild = false;
+        _pendingHandRebuild = false;
     }
 
     private void OnDestroy()
@@ -369,7 +383,7 @@ public class DeckManager : MonoBehaviour
         return returned;
     }
 
-    public bool TryMoveCardFromHandToDiscard(CardData card)
+    public bool TryMoveCardFromHandToDiscard(CardData card, bool notifyHandChanged = true)
     {
         if (card == null || !_hand.Remove(card))
         {
@@ -378,7 +392,11 @@ public class DeckManager : MonoBehaviour
 
         _discardPile.Add(card);
         OnCardDiscarded?.Invoke(card);
-        OnHandChanged?.Invoke();
+        if (notifyHandChanged)
+        {
+            OnHandChanged?.Invoke();
+        }
+
         return true;
     }
 
@@ -460,7 +478,7 @@ public class DeckManager : MonoBehaviour
         _armedCardView = null;
         ClearPendingEnemyTargetSelection();
 
-        TryPlayCardFromHand(cardView.CardData, null);
+        TryPlayCardFromHand(cardView.CardData, null, cardView);
         RefreshSpawnedCardInteractivity();
     }
 
@@ -489,6 +507,7 @@ public class DeckManager : MonoBehaviour
         }
 
         CardData cardToPlay = _pendingTargetCardData;
+        BattleCardView selectedCardView = _armedCardView;
         ClearPendingEnemyTargetSelection(false);
 
         if (_armedCardView != null)
@@ -497,7 +516,7 @@ public class DeckManager : MonoBehaviour
             _armedCardView = null;
         }
 
-        TryPlayCardFromHand(cardToPlay, enemy.gameObject);
+        TryPlayCardFromHand(cardToPlay, enemy.gameObject, selectedCardView);
         RefreshSpawnedCardInteractivity();
     }
 
@@ -548,45 +567,49 @@ public class DeckManager : MonoBehaviour
 
         ClearArmedCardSelection();
         ClearPendingEnemyTargetSelection(false);
-        ClearSpawnedHandCards();
-        ClearSpawnedHandSlots();
 
-        int slotCount = keepEmptyHandSlots ? GetHandLimit() : _hand.Count;
-        slotCount = Mathf.Max(slotCount, _hand.Count);
+        int slotCount = Mathf.Max(GetHandLimit(), _hand.Count);
+        EnsureHandSlots(slotCount);
 
-        for (int i = 0; i < slotCount; i++)
+        Dictionary<CardData, int> remainingCounts = BuildCardCountMap(_hand);
+
+        for (int slotIndex = 0; slotIndex < _slotCardViews.Count; slotIndex++)
         {
-            Transform cardParent = cardHand;
-            if (keepEmptyHandSlots)
+            BattleCardView existingView = _slotCardViews[slotIndex];
+            if (existingView == null || existingView.CardData == null)
             {
-                GameObject slotObject = CreateHandSlot(i);
-                _spawnedHandSlots.Add(slotObject);
-                cardParent = slotObject.transform;
+                _slotCardViews[slotIndex] = null;
+                continue;
             }
 
-            if (i >= _hand.Count)
+            if (existingView.transform.parent != _spawnedHandSlots[slotIndex].transform)
+            {
+                _slotCardViews[slotIndex] = null;
+                continue;
+            }
+
+            if (TryConsumeCardCount(remainingCounts, existingView.CardData))
             {
                 continue;
             }
 
-            CardData card = _hand[i];
-            if (card == null)
-            {
-                continue;
-            }
-
-            GameObject prefabToSpawn = ResolvePrefabForCard(card);
-            if (prefabToSpawn == null)
-            {
-                continue;
-            }
-
-            GameObject cardInstance = Instantiate(prefabToSpawn, cardParent);
-            cardInstance.name = $"Card_{card.displayName}_{i + 1}";
-            BindCardPrefab(cardInstance, card);
-            BindCardInteraction(cardInstance, card);
-            _spawnedHandCards.Add(cardInstance);
+            RemoveCardAtSlot(slotIndex);
         }
+
+        List<CardData> cardsToSpawn = BuildRemainingCardSequence(remainingCounts);
+        int spawnCursor = 0;
+        for (int slotIndex = 0; slotIndex < _slotCardViews.Count && spawnCursor < cardsToSpawn.Count; slotIndex++)
+        {
+            if (_slotCardViews[slotIndex] != null)
+            {
+                continue;
+            }
+
+            SpawnCardAtSlot(slotIndex, cardsToSpawn[spawnCursor]);
+            spawnCursor++;
+        }
+
+        RebuildSpawnedCardCache();
 
         RefreshSpawnedCardInteractivity();
     }
@@ -622,6 +645,11 @@ public class DeckManager : MonoBehaviour
         }
 
         _spawnedHandCards.Clear();
+
+        for (int i = 0; i < _slotCardViews.Count; i++)
+        {
+            _slotCardViews[i] = null;
+        }
     }
 
     private void ClearSpawnedHandSlots()
@@ -645,6 +673,7 @@ public class DeckManager : MonoBehaviour
         }
 
         _spawnedHandSlots.Clear();
+        _slotCardViews.Clear();
     }
 
     private GameObject CreateHandSlot(int index)
@@ -663,6 +692,240 @@ public class DeckManager : MonoBehaviour
         return slotObject;
     }
 
+    private void EnsureHandSlots(int slotCount)
+    {
+        if (slotCount < 0)
+        {
+            slotCount = 0;
+        }
+
+        while (_spawnedHandSlots.Count > slotCount)
+        {
+            int lastIndex = _spawnedHandSlots.Count - 1;
+            RemoveCardAtSlot(lastIndex);
+
+            GameObject slot = _spawnedHandSlots[lastIndex];
+            if (slot != null)
+            {
+                if (Application.isPlaying)
+                {
+                    Destroy(slot);
+                }
+                else
+                {
+                    DestroyImmediate(slot);
+                }
+            }
+
+            _spawnedHandSlots.RemoveAt(lastIndex);
+            if (_slotCardViews.Count > lastIndex)
+            {
+                _slotCardViews.RemoveAt(lastIndex);
+            }
+        }
+
+        while (_spawnedHandSlots.Count < slotCount)
+        {
+            GameObject slotObject = CreateHandSlot(_spawnedHandSlots.Count);
+            _spawnedHandSlots.Add(slotObject);
+            _slotCardViews.Add(null);
+        }
+
+        for (int i = 0; i < _spawnedHandSlots.Count; i++)
+        {
+            GameObject slot = _spawnedHandSlots[i];
+            if (slot == null)
+            {
+                GameObject replacement = CreateHandSlot(i);
+                _spawnedHandSlots[i] = replacement;
+                slot = replacement;
+            }
+
+            if (slot.transform.parent != cardHand)
+            {
+                slot.transform.SetParent(cardHand, false);
+            }
+
+            if (i >= _slotCardViews.Count)
+            {
+                _slotCardViews.Add(null);
+            }
+
+            BattleCardView view = _slotCardViews[i];
+            if (view != null && view.transform.parent != slot.transform)
+            {
+                _slotCardViews[i] = null;
+            }
+
+            if (_slotCardViews[i] == null)
+            {
+                _slotCardViews[i] = slot.GetComponentInChildren<BattleCardView>(true);
+            }
+        }
+    }
+
+    private Dictionary<CardData, int> BuildCardCountMap(IReadOnlyList<CardData> cards)
+    {
+        Dictionary<CardData, int> counts = new Dictionary<CardData, int>();
+        if (cards == null)
+        {
+            return counts;
+        }
+
+        for (int i = 0; i < cards.Count; i++)
+        {
+            CardData card = cards[i];
+            if (card == null)
+            {
+                continue;
+            }
+
+            if (counts.TryGetValue(card, out int count))
+            {
+                counts[card] = count + 1;
+            }
+            else
+            {
+                counts[card] = 1;
+            }
+        }
+
+        return counts;
+    }
+
+    private bool TryConsumeCardCount(Dictionary<CardData, int> counts, CardData cardData)
+    {
+        if (counts == null || cardData == null)
+        {
+            return false;
+        }
+
+        if (!counts.TryGetValue(cardData, out int count) || count <= 0)
+        {
+            return false;
+        }
+
+        if (count == 1)
+        {
+            counts.Remove(cardData);
+        }
+        else
+        {
+            counts[cardData] = count - 1;
+        }
+
+        return true;
+    }
+
+    private List<CardData> BuildRemainingCardSequence(Dictionary<CardData, int> remainingCounts)
+    {
+        List<CardData> sequence = new List<CardData>();
+        if (remainingCounts == null || remainingCounts.Count == 0)
+        {
+            return sequence;
+        }
+
+        for (int i = 0; i < _hand.Count; i++)
+        {
+            CardData card = _hand[i];
+            if (card == null)
+            {
+                continue;
+            }
+
+            if (!remainingCounts.TryGetValue(card, out int count) || count <= 0)
+            {
+                continue;
+            }
+
+            sequence.Add(card);
+            if (count == 1)
+            {
+                remainingCounts.Remove(card);
+            }
+            else
+            {
+                remainingCounts[card] = count - 1;
+            }
+        }
+
+        return sequence;
+    }
+
+    private void SpawnCardAtSlot(int slotIndex, CardData cardData)
+    {
+        if (cardData == null)
+        {
+            return;
+        }
+
+        if (slotIndex < 0 || slotIndex >= _spawnedHandSlots.Count)
+        {
+            return;
+        }
+
+        GameObject prefabToSpawn = ResolvePrefabForCard(cardData);
+        if (prefabToSpawn == null)
+        {
+            return;
+        }
+
+        Transform slotTransform = _spawnedHandSlots[slotIndex] != null
+            ? _spawnedHandSlots[slotIndex].transform
+            : cardHand;
+
+        GameObject cardInstance = Instantiate(prefabToSpawn, slotTransform);
+        cardInstance.name = $"Card_{cardData.displayName}_{slotIndex + 1}";
+        BindCardPrefab(cardInstance, cardData);
+        BindCardInteraction(cardInstance, cardData);
+
+        BattleCardView cardView = cardInstance.GetComponent<BattleCardView>();
+        if (slotIndex < _slotCardViews.Count)
+        {
+            _slotCardViews[slotIndex] = cardView;
+        }
+    }
+
+    private void RemoveCardAtSlot(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex >= _slotCardViews.Count)
+        {
+            return;
+        }
+
+        BattleCardView view = _slotCardViews[slotIndex];
+        if (view != null)
+        {
+            GameObject cardObject = view.gameObject;
+            if (Application.isPlaying)
+            {
+                Destroy(cardObject);
+            }
+            else
+            {
+                DestroyImmediate(cardObject);
+            }
+        }
+
+        _slotCardViews[slotIndex] = null;
+    }
+
+    private void RebuildSpawnedCardCache()
+    {
+        _spawnedHandCards.Clear();
+
+        for (int i = 0; i < _slotCardViews.Count; i++)
+        {
+            BattleCardView view = _slotCardViews[i];
+            if (view == null)
+            {
+                continue;
+            }
+
+            _spawnedHandCards.Add(view.gameObject);
+        }
+    }
+
     private void BindCardInteraction(GameObject cardInstance, CardData cardData)
     {
         if (cardInstance == null || cardData == null)
@@ -679,7 +942,7 @@ public class DeckManager : MonoBehaviour
         cardView.Initialize(this, cardData);
     }
 
-    private bool TryPlayCardFromHand(CardData cardData, GameObject explicitTarget)
+    private bool TryPlayCardFromHand(CardData cardData, GameObject explicitTarget, BattleCardView sourceCardView)
     {
         if (cardData == null || !HasCardInHand(cardData))
         {
@@ -712,16 +975,41 @@ public class DeckManager : MonoBehaviour
         GameObject resolvedTarget = ResolveActionTarget(context, cardData, explicitTarget);
         action.Setup(cardData, context.PlayerObject, resolvedTarget);
 
+        BattleCardView playedCardView = sourceCardView;
+        string slotCaption = cardData.GetRandomCombatEffectLine(_random);
+
+        _suppressHandRebuild = true;
+        _pendingHandRebuild = false;
+
         battleManager.EnqueueAction(action);
         battleManager.ResolveQueue();
 
         if (!action.WasResolvedSuccessfully)
         {
+            _suppressHandRebuild = false;
+            FlushPendingHandRebuild();
             return false;
         }
 
-        cardEffectPresenter?.PlayForCard(cardData);
-        battleManager.EndTurnAfterCardPlay();
+        _pendingHandRebuild = true;
+
+        if (_playCardPresentationRoutine != null)
+        {
+            StopCoroutine(_playCardPresentationRoutine);
+            _playCardPresentationRoutine = null;
+        }
+
+        if (isActiveAndEnabled)
+        {
+            _playCardPresentationRoutine = StartCoroutine(PlayCardConsumePresentationRoutine(playedCardView, slotCaption));
+        }
+        else
+        {
+            _suppressHandRebuild = false;
+            FlushPendingHandRebuild();
+            battleManager.EndTurnAfterCardPlay();
+        }
+
         return true;
     }
 
@@ -736,6 +1024,7 @@ public class DeckManager : MonoBehaviour
         BattleContext context = battleManager.CurrentContext;
         return battleManager.IsEncounterActive
             && !battleManager.IsPaused
+            && !_isPlayingCardConsumePresentation
             && context != null
             && context.IsPlayerTurn;
     }
@@ -790,7 +1079,7 @@ public class DeckManager : MonoBehaviour
             _armedCardView?.SetArmed(false);
             _armedCardView = null;
             ClearPendingEnemyTargetSelection(false);
-            TryPlayCardFromHand(cardToPlay, onlyAliveEnemy.gameObject);
+            TryPlayCardFromHand(cardToPlay, onlyAliveEnemy.gameObject, cardView);
             RefreshSpawnedCardInteractivity();
             return;
         }
@@ -1024,16 +1313,6 @@ public class DeckManager : MonoBehaviour
             battleManager = FindFirstObjectByType<BattleManager>();
         }
 
-        if (cardEffectPresenter == null)
-        {
-            cardEffectPresenter = FindFirstObjectByType<BattleCardEffectPresenter>();
-            if (cardEffectPresenter == null)
-            {
-                GameObject presenterObject = new GameObject(nameof(BattleCardEffectPresenter));
-                cardEffectPresenter = presenterObject.AddComponent<BattleCardEffectPresenter>();
-            }
-        }
-
         if (isActiveAndEnabled)
         {
             SubscribeBattleEvents();
@@ -1078,6 +1357,10 @@ public class DeckManager : MonoBehaviour
 
     private void HandleTurnEnded(int turnNumber)
     {
+        _isPlayingCardConsumePresentation = false;
+        _suppressHandRebuild = false;
+        _pendingHandRebuild = false;
+
         ClearArmedCardSelection();
         ClearPendingEnemyTargetSelection(false);
         ClearSkipTurnDiscardSelectionState(false);
@@ -1086,10 +1369,54 @@ public class DeckManager : MonoBehaviour
 
     private void HandleEncounterEnded(bool playerWon)
     {
+        _isPlayingCardConsumePresentation = false;
+        _suppressHandRebuild = false;
+        _pendingHandRebuild = false;
+
         ClearArmedCardSelection();
         ClearPendingEnemyTargetSelection();
         ClearSkipTurnDiscardSelectionState(false);
         RefreshSpawnedCardInteractivity();
+    }
+
+    private void HandleHandChanged()
+    {
+        if (_suppressHandRebuild)
+        {
+            _pendingHandRebuild = true;
+            return;
+        }
+
+        RebuildHandView();
+    }
+
+    private void FlushPendingHandRebuild()
+    {
+        if (!_pendingHandRebuild)
+        {
+            return;
+        }
+
+        _pendingHandRebuild = false;
+        RebuildHandView();
+    }
+
+    private IEnumerator PlayCardConsumePresentationRoutine(BattleCardView playedCardView, string slotCaption)
+    {
+        _isPlayingCardConsumePresentation = true;
+        RefreshSpawnedCardInteractivity();
+
+        if (playedCardView != null)
+        {
+            yield return playedCardView.PlayDissolveAndShowSlotText(slotCaption);
+        }
+
+        _isPlayingCardConsumePresentation = false;
+        _suppressHandRebuild = false;
+        FlushPendingHandRebuild();
+
+        battleManager?.EndTurnAfterCardPlay();
+        _playCardPresentationRoutine = null;
     }
 
     private void BindCardPrefab(GameObject cardInstance, CardData cardData)
