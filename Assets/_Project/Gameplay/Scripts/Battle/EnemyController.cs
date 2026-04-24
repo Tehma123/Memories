@@ -181,27 +181,28 @@ public class EnemyController : MonoBehaviour, IDamageable, IPointerClickHandler
         }
     }
 
-    public void TakeTurn()
+    public bool TakeTurn()
     {
         if (!IsAlive || battleManager == null)
         {
-            return;
+            return false;
         }
 
         BattleContext context = battleManager.CurrentContext;
         if (context == null)
         {
-            return;
+            return false;
         }
 
         EnemyMoveData move = enemyData != null ? enemyData.GetRandomMove(context.Random) : null;
         if (move == null)
         {
             context.MemoryManager?.ChangeMemory(-1f);
-            return;
+            return false;
         }
 
         int value = move.GetRoll(context.Random);
+        bool isAttackMove = move.moveType == EnemyMoveType.Attack || move.moveType == EnemyMoveType.AttackMemory;
 
         switch (move.moveType)
         {
@@ -230,6 +231,7 @@ public class EnemyController : MonoBehaviour, IDamageable, IPointerClickHandler
         }
 
         Debug.Log($"Enemy '{name}' used move '{move.displayName}' (value {value}).");
+        return isAttackMove;
     }
 
     private void NotifyHealthChanged()

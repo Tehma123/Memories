@@ -78,9 +78,4 @@ public class BattleContext
 
 		return null;
 	}
-
-	public void SetRandomSeed(int seed)
-	{
-		Random = new System.Random(seed);
-	}
 }

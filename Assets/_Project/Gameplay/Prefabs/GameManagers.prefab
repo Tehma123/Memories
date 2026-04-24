@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4191699289339062875}
   - component: {fileID: 7250783013755786887}
   - component: {fileID: 8346662932880129188}
+  - component: {fileID: 6719898472554963207}
   m_Layer: 0
   m_Name: GameManagers
   m_TagString: Untagged
@@ -52,6 +53,9 @@ MonoBehaviour:
   playerInteraction: {fileID: 0}
   stateManager: {fileID: 8346662932880129188}
   memoryManager: {fileID: 7250783013755786887}
+  namePlateText: {fileID: 0}
+  dialogueText: {fileID: 0}
+  clearNarrativeUiOnDialogueEnd: 1
   cardRewardPresenter: {fileID: 0}
   cardRewardSequences:
   - sequenceId: Shaman_5_cards
@@ -82,6 +86,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MemoryManager
   startingMemoryPercent: 100
   maxMemoryPercent: 100
+  memBarFill: {fileID: 0}
+  memBarFillImage: {fileID: 0}
+  memBarLabel: {fileID: 0}
 --- !u!114 &8346662932880129188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -94,3 +101,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3410074248cacaf42a0c286b23bdb301, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StateManager
+--- !u!114 &6719898472554963207
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7148960285982515476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f065d92ae6fdb63479371a4c0d15fab8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  musicSource: {fileID: 0}
+  sfxSource: {fileID: 0}
+  musicLibrary:
+  - type: 0
+    clip: {fileID: 0}
+  - type: 1
+    clip: {fileID: 0}
+  - type: 2
+    clip: {fileID: 0}
+  musicVolume: 1

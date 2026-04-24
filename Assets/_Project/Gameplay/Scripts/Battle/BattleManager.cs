@@ -1,24 +1,23 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 public class BattleManager : MonoBehaviour
 {
     private readonly struct EnemyResolutionResult
     {
-        public EnemyResolutionResult(string encounterId, int sourceEnemyCount, EnemyData[] resolvedEnemies, bool usedFallback)
+        public EnemyResolutionResult(string encounterId, int sourceEnemyCount, EnemyData[] resolvedEnemies)
         {
             EncounterId = encounterId;
             SourceEnemyCount = sourceEnemyCount;
             ResolvedEnemies = resolvedEnemies;
-            UsedFallback = usedFallback;
         }
 
         public string EncounterId { get; }
         public int SourceEnemyCount { get; }
         public EnemyData[] ResolvedEnemies { get; }
-        public bool UsedFallback { get; }
     }
 
     [SerializeField] private DeckManager deckManager;
@@ -35,6 +34,15 @@ public class BattleManager : MonoBehaviour
 
     [Header("Combat Flow")]
     [SerializeField] private bool freezeGameplayTimeOnPause = true;
+
+    [Header("Turn Timing")]
+    [SerializeField, Min(0f)] private float turnTransitionDelaySeconds = 3f;
+    [SerializeField, Min(0f)] private float enemyActionIntervalSeconds = 0.35f;
+
+    [Header("Enemy Attack Feedback")]
+    [SerializeField, Min(0f)] private float enemyAttackShakeDuration = 0.12f;
+    [SerializeField, Min(0f)] private float enemyAttackUiShakePixels = 18f;
+    [SerializeField] private RectTransform screenShakeTarget;
 
     [Header("Victory Flow")]
     [SerializeField] private bool requestCheckpointSaveOnVictory = true;
@@ -66,13 +74,16 @@ public class BattleManager : MonoBehaviour
     private float _cachedTimeScaleBeforePause = 1f;
     private int _currentEncounterSeed;
     private CombatFlowState _stateBeforePause = CombatFlowState.Init;
+    private Coroutine _turnFlowCoroutine;
+    private Coroutine _cameraShakeCoroutine;
+    private RectTransform _activeUiShakeTarget;
+    private Vector2 _activeUiShakeBasePosition;
 
     public BattleContext CurrentContext => _context;
     public IReadOnlyList<EnemyController> ActiveEnemies => _activeEnemies;
     public bool IsEncounterActive => _encounterActive;
     public bool IsPaused => _isPaused;
     public CombatFlowState FlowState { get; private set; } = CombatFlowState.Init;
-    public int CurrentEncounterSeed => _currentEncounterSeed;
 
     public event Action<BattleContext> OnEncounterStarted;
     public event Action<string, int, int> OnEncounterResolved;
@@ -153,6 +164,14 @@ public class BattleManager : MonoBehaviour
             endTurnButton.onClick.RemoveListener(HandleEndTurnButtonClicked);
         }
 
+        if (_turnFlowCoroutine != null)
+        {
+            StopCoroutine(_turnFlowCoroutine);
+            _turnFlowCoroutine = null;
+        }
+
+        StopCameraShake();
+
         if (_isPaused)
         {
             RestoreTimeScaleAfterPause();
@@ -201,12 +220,6 @@ public class BattleManager : MonoBehaviour
         }
 
         OnEncounterResolved?.Invoke(resolution.EncounterId, resolution.SourceEnemyCount, resolution.ResolvedEnemies.Length);
-
-        if (resolution.UsedFallback)
-        {
-            string encounterId = string.IsNullOrWhiteSpace(resolution.EncounterId) ? "unknown-encounter" : resolution.EncounterId;
-            Debug.LogWarning($"Encounter '{encounterId}' used fallback enemy configuration after payload resolution.");
-        }
 
         SpawnEnemies(resolution.ResolvedEnemies);
 
@@ -285,6 +298,21 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
+        if (_turnFlowCoroutine != null)
+        {
+            return;
+        }
+
+        if (deckManager != null && deckManager.IsCardPresentationPlaying)
+        {
+            return;
+        }
+
+        if (DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive)
+        {
+            return;
+        }
+
         if (_isWaitingForSkipDiscardSelection)
         {
             return;
@@ -302,25 +330,73 @@ public class BattleManager : MonoBehaviour
             deckManager?.DrawRandomBasicCards(1);
         }
 
+        _turnFlowCoroutine = StartCoroutine(ResolveTurnFlowRoutine());
+        UpdateEndTurnButtonState();
+    }
+
+    private IEnumerator ResolveTurnFlowRoutine()
+    {
         SetFlowState(CombatFlowState.Resolve);
         ResolveQueue();
+
+        if (_context == null)
+        {
+            _turnFlowCoroutine = null;
+            UpdateEndTurnButtonState();
+            yield break;
+        }
+
         _context.IsPlayerTurn = false;
         UpdateEndTurnButtonState();
 
         if (TryHandleEncounterEndState())
         {
-            return;
+            _turnFlowCoroutine = null;
+            yield break;
+        }
+
+        if (turnTransitionDelaySeconds > 0f)
+        {
+            yield return WaitForCombatDelay(turnTransitionDelaySeconds);
+        }
+
+        if (!_encounterActive || _context == null || _isPaused)
+        {
+            _turnFlowCoroutine = null;
+            UpdateEndTurnButtonState();
+            yield break;
         }
 
         SetFlowState(CombatFlowState.EnemyTurn);
-        RunEnemyTurn();
-        stateManager?.TickTurnEnd();
+        yield return RunEnemyTurnRoutine();
 
+        if (!_encounterActive || _context == null)
+        {
+            _turnFlowCoroutine = null;
+            UpdateEndTurnButtonState();
+            yield break;
+        }
+
+        stateManager?.TickTurnEnd();
         OnTurnEnded?.Invoke(_context.TurnNumber);
 
         if (TryHandleEncounterEndState())
         {
-            return;
+            _turnFlowCoroutine = null;
+            yield break;
+        }
+
+        if (turnTransitionDelaySeconds > 0f)
+        {
+            yield return WaitForCombatDelay(turnTransitionDelaySeconds);
+        }
+
+        _turnFlowCoroutine = null;
+
+        if (!_encounterActive || _context == null || _isPaused)
+        {
+            UpdateEndTurnButtonState();
+            yield break;
         }
 
         StartTurn();
@@ -370,23 +446,6 @@ public class BattleManager : MonoBehaviour
 
         _isResolvingQueue = false;
         UpdateEndTurnButtonState();
-    }
-
-    public void EndEncounter()
-    {
-        bool playerWon = AreAllEnemiesDefeated() && !IsPlayerDefeated();
-        EndEncounterInternal(playerWon);
-    }
-
-    public bool SkipTurnToDraw()
-    {
-        if (!_encounterActive || _context == null || _isPaused || !_context.IsPlayerTurn)
-        {
-            return false;
-        }
-
-        EndTurn();
-        return true;
     }
 
     public bool PauseCombat()
@@ -472,28 +531,6 @@ public class BattleManager : MonoBehaviour
         return true;
     }
 
-    public void LoadCheckpointAfterDefeat()
-    {
-        if (string.IsNullOrWhiteSpace(checkpointSceneName))
-        {
-            Debug.LogWarning("BattleManager has no checkpointSceneName configured for defeat recovery.");
-            return;
-        }
-
-        SceneTransitionContext.LoadScene(checkpointSceneName, checkpointEntryPointId);
-    }
-
-    public void QuitToMenuAfterDefeat()
-    {
-        if (string.IsNullOrWhiteSpace(quitToMenuSceneName))
-        {
-            Debug.LogWarning("BattleManager has no quitToMenuSceneName configured for defeat recovery.");
-            return;
-        }
-
-        SceneTransitionContext.LoadScene(quitToMenuSceneName, quitToMenuEntryPointId);
-    }
-
     public void ConfigureRuntimeEncounter(EncounterPayload payload, EnemyData[] enemies)
     {
         _runtimeEncounterPayload = payload?.Clone();
@@ -506,17 +543,36 @@ public class BattleManager : MonoBehaviour
         return CopyEnemyArray(encounterEnemies);
     }
 
-    private void RunEnemyTurn()
+    private IEnumerator RunEnemyTurnRoutine()
     {
         for (int i = 0; i < _activeEnemies.Count; i++)
         {
+            if (!_encounterActive || _isPaused)
+            {
+                yield break;
+            }
+
             EnemyController enemy = _activeEnemies[i];
             if (enemy == null || !enemy.IsAlive)
             {
                 continue;
             }
 
-            enemy.TakeTurn();
+            bool didAttack = enemy.TakeTurn();
+            if (didAttack)
+            {
+                yield return PlayEnemyAttackFeedbackRoutine();
+            }
+
+            if (TryHandleEncounterEndState())
+            {
+                yield break;
+            }
+
+            if (enemyActionIntervalSeconds > 0f)
+            {
+                yield return WaitForCombatDelay(enemyActionIntervalSeconds);
+            }
         }
     }
 
@@ -612,6 +668,15 @@ public class BattleManager : MonoBehaviour
         actionQueue?.Clear();
         actionQueue?.SetContext(null);
         stateManager?.ClearAllStates();
+
+        if (_turnFlowCoroutine != null)
+        {
+            StopCoroutine(_turnFlowCoroutine);
+            _turnFlowCoroutine = null;
+        }
+
+        StopCameraShake();
+
         _context = null;
         _encounterActive = false;
         _isResolvingQueue = false;
@@ -646,6 +711,14 @@ public class BattleManager : MonoBehaviour
         actionQueue?.Clear();
         _isWaitingForSkipDiscardSelection = false;
 
+        if (_turnFlowCoroutine != null)
+        {
+            StopCoroutine(_turnFlowCoroutine);
+            _turnFlowCoroutine = null;
+        }
+
+        StopCameraShake();
+
         if (playerWon)
         {
             SetFlowState(CombatFlowState.Victory);
@@ -679,20 +752,125 @@ public class BattleManager : MonoBehaviour
             return;
         }
 
+        bool hasDialogueLock = DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive;
+        bool hasCardPresentationLock = deckManager != null && deckManager.IsCardPresentationPlaying;
+
         bool canInteract = _encounterActive
             && !_isPaused
             && _context != null
             && _context.IsPlayerTurn
             && !_isResolvingQueue
+            && _turnFlowCoroutine == null
             && !_isWaitingForSkipDiscardSelection
+            && !hasDialogueLock
+            && !hasCardPresentationLock
             && FlowState == CombatFlowState.PlayerTurn;
         endTurnButton.interactable = canInteract;
+    }
+
+    public void RefreshInteractionState()
+    {
+        UpdateEndTurnButtonState();
+    }
+
+    private IEnumerator WaitForCombatDelay(float seconds)
+    {
+        float remaining = Mathf.Max(0f, seconds);
+
+        while (remaining > 0f)
+        {
+            if (!_encounterActive)
+            {
+                yield break;
+            }
+
+            if (!_isPaused)
+            {
+                remaining -= Time.unscaledDeltaTime;
+            }
+
+            yield return null;
+        }
+    }
+
+    private IEnumerator PlayEnemyAttackFeedbackRoutine()
+    {
+        if (enemyAttackShakeDuration <= 0f || enemyAttackUiShakePixels <= 0f)
+        {
+            yield break;
+        }
+
+        RectTransform shakeTarget = screenShakeTarget;
+        if (shakeTarget == null)
+        {
+            yield break;
+        }
+
+        StopCameraShake();
+        _cameraShakeCoroutine = StartCoroutine(PlayUiShakeRoutine(shakeTarget));
+
+        while (_cameraShakeCoroutine != null)
+        {
+            yield return null;
+        }
+    }
+
+    private IEnumerator PlayUiShakeRoutine(RectTransform shakeTarget)
+    {
+        if (shakeTarget == null)
+        {
+            _cameraShakeCoroutine = null;
+            yield break;
+        }
+
+        _activeUiShakeTarget = shakeTarget;
+        _activeUiShakeBasePosition = shakeTarget.anchoredPosition;
+
+        float duration = Mathf.Max(0f, enemyAttackShakeDuration);
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            if (_isPaused)
+            {
+                shakeTarget.anchoredPosition = _activeUiShakeBasePosition;
+                yield return null;
+                continue;
+            }
+
+            float t = Mathf.Clamp01(elapsed / duration);
+            float damper = 1f - t;
+            Vector2 offset = UnityEngine.Random.insideUnitCircle * enemyAttackUiShakePixels * damper;
+            shakeTarget.anchoredPosition = _activeUiShakeBasePosition + offset;
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        shakeTarget.anchoredPosition = _activeUiShakeBasePosition;
+
+        _activeUiShakeTarget = null;
+        _cameraShakeCoroutine = null;
+    }
+
+    private void StopCameraShake()
+    {
+        if (_cameraShakeCoroutine != null)
+        {
+            StopCoroutine(_cameraShakeCoroutine);
+            _cameraShakeCoroutine = null;
+        }
+
+        if (_activeUiShakeTarget != null)
+        {
+            _activeUiShakeTarget.anchoredPosition = _activeUiShakeBasePosition;
+            _activeUiShakeTarget = null;
+        }
     }
 
     private EnemyResolutionResult ResolveEncounterEnemies(EnemyData[] requestedEnemies, EncounterPayload payload)
     {
         List<EnemyData> resolved = new List<EnemyData>(CombatConfig.MaxEnemySlots);
-        bool usedFallback = false;
 
         int requestedCount = payload != null && payload.RequestedEnemyCount > 0
             ? payload.RequestedEnemyCount
@@ -704,19 +882,12 @@ public class BattleManager : MonoBehaviour
 
         AddEnemiesWithClamp(requestedEnemies, resolved);
 
-        if (resolved.Count < CombatConfig.MinEnemySlots)
-        {
-            int previousCount = resolved.Count;
-            AddEnemiesWithClamp(encounterEnemies, resolved);
-            usedFallback = resolved.Count > previousCount;
-        }
-
         if (requestedCount <= 0)
         {
             requestedCount = resolved.Count;
         }
 
-        return new EnemyResolutionResult(encounterId, requestedCount, resolved.ToArray(), usedFallback);
+        return new EnemyResolutionResult(encounterId, requestedCount, resolved.ToArray());
     }
 
     private int ResolveEncounterSeed(EncounterPayload payload)

@@ -7,7 +7,6 @@ public class ActionQueue : MonoBehaviour
     private readonly Queue<IBattleAction> _pendingActions = new Queue<IBattleAction>();
     private BattleContext _context;
 
-    public int Count => _pendingActions.Count;
     public bool HasPendingActions => _pendingActions.Count > 0;
 
     public event Action<IBattleAction> OnActionEnqueued;

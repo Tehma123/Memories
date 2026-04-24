@@ -384,6 +384,7 @@ MonoBehaviour:
   destinationSceneName: MemoryShopScene
   destinationEntryPointId: InShop
   blockRepeatedUse: 1
+  preTransitionDialogue: {fileID: 0}
   includeEncounterPayload: 0
   encounterId: 
   encounterEnemies: []
@@ -916,6 +917,7 @@ MonoBehaviour:
   destinationSceneName: CombatScene
   destinationEntryPointId: Default
   blockRepeatedUse: 1
+  preTransitionDialogue: {fileID: 11400000, guid: 948f1c0f5ef15684a850602354ec9007, type: 2}
   includeEncounterPayload: 1
   encounterId: TutorialEncounter01
   encounterEnemies:
@@ -16491,6 +16493,10 @@ PrefabInstance:
     - target: {fileID: 920426652641242998, guid: ac0296fbf0d0239499cbb6b4b04f2041, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5096819156525065840, guid: ac0296fbf0d0239499cbb6b4b04f2041, type: 3}
+      propertyPath: m_Color.a
+      value: 0.8627451
       objectReference: {fileID: 0}
     - target: {fileID: 6887530327433143946, guid: ac0296fbf0d0239499cbb6b4b04f2041, type: 3}
       propertyPath: m_Name

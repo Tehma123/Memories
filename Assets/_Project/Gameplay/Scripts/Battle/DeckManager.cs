@@ -11,7 +11,6 @@ public class DeckManager : MonoBehaviour
 
     [SerializeField] private List<CardData> startingDeck = new List<CardData>();
     [SerializeField, Min(1)] private int handSize = 5;
-    [SerializeField] private int drawPerTurn = 0;
 
     [Header("Skip Turn Draw")]
     [SerializeField] private List<CardData> basicCardPool = new List<CardData>();
@@ -63,7 +62,7 @@ public class DeckManager : MonoBehaviour
     public event Action OnHandChanged;
     public event Action OnDeckEmpty;
 
-    public bool IsAwaitingSkipTurnDiscardSelection => _awaitingSkipTurnDiscardSelection;
+    public bool IsCardPresentationPlaying => _isPlayingCardConsumePresentation;
 
     private void OnEnable()
     {
@@ -134,11 +133,6 @@ public class DeckManager : MonoBehaviour
     public void DrawInitialHand()
     {
         DrawCards(GetHandLimit());
-    }
-
-    public void DrawForTurn()
-    {
-        DrawCards(Mathf.Max(0, drawPerTurn));
     }
 
     public bool TryBeginSkipTurnDraw(Action onSkipTurnResolved)
@@ -251,58 +245,6 @@ public class DeckManager : MonoBehaviour
         return drawn;
     }
 
-    public void DiscardCard(CardData card)
-    {
-        if (card == null)
-        {
-            return;
-        }
-
-        if (_hand.Remove(card))
-        {
-            _discardPile.Add(card);
-            OnCardDiscarded?.Invoke(card);
-            OnHandChanged?.Invoke();
-            return;
-        }
-
-        if (_drawPile.Remove(card))
-        {
-            _discardPile.Add(card);
-            OnCardDiscarded?.Invoke(card);
-            return;
-        }
-
-        if (_exilePile.Remove(card))
-        {
-            _discardPile.Add(card);
-            OnCardDiscarded?.Invoke(card);
-        }
-    }
-
-    public void ExileCard(CardData card)
-    {
-        if (card == null)
-        {
-            return;
-        }
-
-        bool removedFromHand = _hand.Remove(card);
-        bool removed = removedFromHand || _drawPile.Remove(card) || _discardPile.Remove(card);
-        if (!removed)
-        {
-            return;
-        }
-
-        _exilePile.Add(card);
-        OnCardExiled?.Invoke(card);
-
-        if (removedFromHand)
-        {
-            OnHandChanged?.Invoke();
-        }
-    }
-
     public void ShuffleDiscardIntoDeck()
     {
         if (_discardPile.Count == 0)
@@ -398,12 +340,6 @@ public class DeckManager : MonoBehaviour
         }
 
         return true;
-    }
-
-    public void SetCardHandRoot(Transform handRoot)
-    {
-        cardHand = handRoot;
-        RebuildHandView();
     }
 
     public void HandleCardClicked(BattleCardView cardView)
@@ -1404,6 +1340,7 @@ public class DeckManager : MonoBehaviour
     private IEnumerator PlayCardConsumePresentationRoutine(BattleCardView playedCardView, string slotCaption)
     {
         _isPlayingCardConsumePresentation = true;
+        battleManager?.RefreshInteractionState();
         RefreshSpawnedCardInteractivity();
 
         if (playedCardView != null)
@@ -1414,9 +1351,10 @@ public class DeckManager : MonoBehaviour
         _isPlayingCardConsumePresentation = false;
         _suppressHandRebuild = false;
         FlushPendingHandRebuild();
+        _playCardPresentationRoutine = null;
+        battleManager?.RefreshInteractionState();
 
         battleManager?.EndTurnAfterCardPlay();
-        _playCardPresentationRoutine = null;
     }
 
     private void BindCardPrefab(GameObject cardInstance, CardData cardData)
@@ -1569,7 +1507,6 @@ public class DeckManager : MonoBehaviour
     private void OnValidate()
     {
         handSize = Mathf.Clamp(handSize, 1, RuleHandLimit);
-        drawPerTurn = Mathf.Max(0, drawPerTurn);
         emptySlotSize.x = Mathf.Max(1f, emptySlotSize.x);
         emptySlotSize.y = Mathf.Max(1f, emptySlotSize.y);
 
