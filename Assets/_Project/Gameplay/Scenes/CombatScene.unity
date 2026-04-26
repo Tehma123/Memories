@@ -469,6 +469,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 8902194}
     - target: {fileID: 4191699289339062875, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
+      propertyPath: memoryManager
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 4191699289339062875, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
       propertyPath: namePlateText
       value: 
       objectReference: {fileID: 1326712810}
@@ -528,30 +532,20 @@ PrefabInstance:
       propertyPath: m_Name
       value: GameManagers
       objectReference: {fileID: 0}
-    - target: {fileID: 7250783013755786887, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
+    - target: {fileID: 0}
       propertyPath: memBarFill
       value: 
       objectReference: {fileID: 680242255}
-    - target: {fileID: 7250783013755786887, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
+    - target: {fileID: 0}
       propertyPath: memBarLabel
       value: 
       objectReference: {fileID: 2105617535}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 0}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
---- !u!114 &130046782 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7250783013755786887, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
-  m_PrefabInstance: {fileID: 130046781}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 956219125e5625d4f912be58f210704f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MemoryManager
 --- !u!114 &130046783 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8346662932880129188, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
@@ -1814,6 +1808,7 @@ GameObject:
   - component: {fileID: 1794199741}
   - component: {fileID: 1794199740}
   - component: {fileID: 1794199739}
+  - component: {fileID: 1794199743}
   m_Layer: 0
   m_Name: CombatManagers
   m_TagString: Untagged
@@ -1875,7 +1870,7 @@ MonoBehaviour:
   deckManager: {fileID: 1794199740}
   actionQueue: {fileID: 1794199739}
   stateManager: {fileID: 130046783}
-  memoryManager: {fileID: 130046782}
+  memoryManager: {fileID: 0}
   playerObject: {fileID: 0}
   enemySlots:
   - {fileID: 1534571801}
@@ -1918,6 +1913,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1794199743
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1794199738}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 956219125e5625d4f912be58f210704f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MemoryManager
+  startingMemoryPercent: 100
+  maxMemoryPercent: 100
+  memBarFill: {fileID: 680242255}
+  memBarFillImage: {fileID: 0}
+  memBarLabel: {fileID: 2105617535}
 --- !u!1 &1913294980
 GameObject:
   m_ObjectHideFlags: 0

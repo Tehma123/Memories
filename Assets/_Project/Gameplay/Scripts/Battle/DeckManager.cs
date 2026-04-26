@@ -46,6 +46,7 @@ public class DeckManager : MonoBehaviour
     private bool _suppressHandRebuild;
     private bool _pendingHandRebuild;
     private Coroutine _playCardPresentationRoutine;
+    private bool _hasLoggedMissingBattleManager;
 
     private System.Random _random = new System.Random();
 
@@ -99,6 +100,12 @@ public class DeckManager : MonoBehaviour
     private void Awake()
     {
         ResolveRuntimeReferences();
+
+        if (battleManager == null)
+        {
+            Debug.LogWarning($"{nameof(DeckManager)} on '{name}' is missing {nameof(battleManager)} reference.");
+            _hasLoggedMissingBattleManager = true;
+        }
     }
 
     public void SetSeed(int seed)
@@ -1244,14 +1251,19 @@ public class DeckManager : MonoBehaviour
 
     private void ResolveRuntimeReferences()
     {
-        if (battleManager == null)
-        {
-            battleManager = FindFirstObjectByType<BattleManager>();
-        }
-
         if (isActiveAndEnabled)
         {
             SubscribeBattleEvents();
+        }
+
+        if (battleManager == null && !_hasLoggedMissingBattleManager)
+        {
+            Debug.LogWarning($"{nameof(DeckManager)} on '{name}' is missing {nameof(battleManager)} reference.");
+            _hasLoggedMissingBattleManager = true;
+        }
+        else if (battleManager != null)
+        {
+            _hasLoggedMissingBattleManager = false;
         }
     }
 
@@ -1353,8 +1365,6 @@ public class DeckManager : MonoBehaviour
         FlushPendingHandRebuild();
         _playCardPresentationRoutine = null;
         battleManager?.RefreshInteractionState();
-
-        battleManager?.EndTurnAfterCardPlay();
     }
 
     private void BindCardPrefab(GameObject cardInstance, CardData cardData)
@@ -1504,8 +1514,15 @@ public class DeckManager : MonoBehaviour
         return null;
     }
 
+    private void Reset()
+    {
+        AutoAssignReferencesInEditor();
+    }
+
     private void OnValidate()
     {
+        AutoAssignReferencesInEditor();
+
         handSize = Mathf.Clamp(handSize, 1, RuleHandLimit);
         emptySlotSize.x = Mathf.Max(1f, emptySlotSize.x);
         emptySlotSize.y = Mathf.Max(1f, emptySlotSize.y);
@@ -1513,6 +1530,19 @@ public class DeckManager : MonoBehaviour
         if (requireManualDiscardSelectionOnSkipDraw)
         {
             discardRandomWhenHandIsFullOnSkipDraw = false;
+        }
+    }
+
+    private void AutoAssignReferencesInEditor()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        if (battleManager == null)
+        {
+            battleManager = FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);
         }
     }
 }

@@ -10,16 +10,21 @@ public class BattleSceneBootstrap : MonoBehaviour
     [SerializeField] private EnemyData[] enemyCatalog = Array.Empty<EnemyData>();
     [SerializeField] private bool logResolutionDetails = true;
 
+    private void Reset()
+    {
+        AutoAssignReferencesInEditor();
+    }
+
+    private void OnValidate()
+    {
+        AutoAssignReferencesInEditor();
+    }
+
     private void Awake()
     {
         if (battleManager == null)
         {
-            battleManager = FindFirstObjectByType<BattleManager>();
-        }
-
-        if (battleManager == null)
-        {
-            Debug.LogWarning($"{nameof(BattleSceneBootstrap)} could not find a BattleManager in scene.");
+            Debug.LogWarning($"{nameof(BattleSceneBootstrap)} on '{name}' is missing {nameof(battleManager)} reference.");
             return;
         }
 
@@ -45,6 +50,19 @@ public class BattleSceneBootstrap : MonoBehaviour
             Debug.Log(
                 $"BattleSceneBootstrap resolved encounter '{payload.EncounterId}' " +
                 $"from {payload.RequestedEnemyCount} source enemies to {resolvedEnemies.Length} active combat enemies.");
+        }
+    }
+
+    private void AutoAssignReferencesInEditor()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        if (battleManager == null)
+        {
+            battleManager = FindFirstObjectByType<BattleManager>(FindObjectsInactive.Include);
         }
     }
 

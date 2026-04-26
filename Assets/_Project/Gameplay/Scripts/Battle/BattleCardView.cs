@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
@@ -23,6 +24,11 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     [SerializeField, Min(8f)] private float slotCaptionFontSize = 18f;
     [SerializeField] private bool slotCaptionBold = false;
     [SerializeField] private TMP_FontAsset slotCaptionFont;
+
+    [Header("Inspector Actions")]
+    [SerializeField] private UnityEvent onPointerClicked;
+    [SerializeField] private UnityEvent onDissolveStarted;
+    [SerializeField] private UnityEvent onDissolveCompleted;
 
     private DeckManager _owner;
     private CardData _cardData;
@@ -96,11 +102,13 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
             return;
         }
 
+        onPointerClicked?.Invoke();
         _owner.HandleCardClicked(this);
     }
 
     public IEnumerator PlayDissolveAndShowSlotText(string caption)
     {
+        onDissolveStarted?.Invoke();
         CancelScaleTween();
         _isInteractable = false;
 
@@ -162,12 +170,14 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
 
         if (string.IsNullOrWhiteSpace(caption))
         {
+            onDissolveCompleted?.Invoke();
             yield break;
         }
 
         Transform slotRoot = transform.parent;
         if (slotRoot == null)
         {
+            onDissolveCompleted?.Invoke();
             yield break;
         }
 
@@ -215,6 +225,7 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
                 DestroyImmediate(captionObject);
             }
 
+            onDissolveCompleted?.Invoke();
             yield break;
         }
 
@@ -248,6 +259,8 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         {
             DestroyImmediate(captionObject);
         }
+
+        onDissolveCompleted?.Invoke();
     }
 
     private void OnDisable()

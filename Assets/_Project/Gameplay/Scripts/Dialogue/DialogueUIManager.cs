@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class DialogueUIManager : MonoBehaviour
@@ -52,18 +53,25 @@ public class DialogueUIManager : MonoBehaviour
         ResolveReferences();
         EnsureUIBindings();
         ConfigurePanelVisibilityStrategy();
+        SceneManager.sceneLoaded += HandleSceneLoaded;
         Subscribe();
         SyncWithDialogueState();
     }
 
     private void OnDisable()
     {
+        SceneManager.sceneLoaded -= HandleSceneLoaded;
         StopTypewriterAnimation(false);
         Unsubscribe();
     }
 
     private void Update()
     {
+        if (dialogueManager != DialogueManager.Instance)
+        {
+            ResolveReferences();
+        }
+
         if (!_subscribed)
         {
             ResolveReferences();
@@ -130,9 +138,16 @@ public class DialogueUIManager : MonoBehaviour
 
     private void ResolveReferences()
     {
-        if (dialogueManager == null)
+        DialogueManager resolvedManager = DialogueManager.Instance;
+        if (resolvedManager == null)
         {
-            dialogueManager = FindFirstObjectByType<DialogueManager>();
+            resolvedManager = FindFirstObjectByType<DialogueManager>();
+        }
+
+        if (dialogueManager != resolvedManager)
+        {
+            Unsubscribe();
+            dialogueManager = resolvedManager;
         }
 
         if (typewriterTickClip != null && typewriterAudioSource == null)
@@ -146,6 +161,15 @@ public class DialogueUIManager : MonoBehaviour
                 typewriterAudioSource.spatialBlend = 0f;
             }
         }
+    }
+
+    private void HandleSceneLoaded(Scene _, LoadSceneMode __)
+    {
+        ResolveReferences();
+        EnsureUIBindings();
+        ConfigurePanelVisibilityStrategy();
+        Subscribe();
+        SyncWithDialogueState();
     }
 
     private void EnsureUIBindings()

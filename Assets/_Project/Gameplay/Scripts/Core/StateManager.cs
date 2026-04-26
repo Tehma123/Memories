@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class StateManager : MonoBehaviour
 {
+    public static StateManager Instance { get; private set; }
+
     [Serializable]
     private class TimedState
     {
@@ -21,6 +23,26 @@ public class StateManager : MonoBehaviour
 
     public event Action<GameObject, string, int> OnStateApplied;
     public event Action<GameObject, string> OnStateRemoved;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+    }
 
     public void ApplyState(GameObject target, string stateId, int durationTurns)
     {

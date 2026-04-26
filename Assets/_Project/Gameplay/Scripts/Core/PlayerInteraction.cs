@@ -45,7 +45,10 @@ public class PlayerInteraction : MonoBehaviour
 
         _wasInteractPressed = true;
 
-        TryInteract();
+        if (!TryInteract())
+        {
+            _wasInteractPressed = false;
+        }
     }
 
     public void SetInteractionEnabled(bool isEnabled)
@@ -54,16 +57,15 @@ public class PlayerInteraction : MonoBehaviour
 
         if (!_isInteractionEnabled)
         {
-            _targetsInRange.Clear();
             _wasInteractPressed = false;
         }
     }
 
-    public void TryInteract()
+    public bool TryInteract()
     {
         if (!_isInteractionEnabled)
         {
-            return;
+            return false;
         }
 
         IInteractable target = GetNearestKnownTarget();
@@ -72,7 +74,13 @@ public class PlayerInteraction : MonoBehaviour
             target = FindNearestByOverlap();
         }
 
-        target?.Interact();
+        if (target == null)
+        {
+            return false;
+        }
+
+        target.Interact();
+        return true;
     }
 
     private void OnTriggerEnter2D(Collider2D other)

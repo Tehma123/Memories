@@ -10,9 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 6698621897160219362}
   - component: {fileID: 4191699289339062875}
-  - component: {fileID: 7250783013755786887}
   - component: {fileID: 8346662932880129188}
   - component: {fileID: 6719898472554963207}
+  - component: {fileID: -4502867904831994845}
   m_Layer: 0
   m_Name: GameManagers
   m_TagString: Untagged
@@ -52,7 +52,6 @@ MonoBehaviour:
   playerMovement: {fileID: 0}
   playerInteraction: {fileID: 0}
   stateManager: {fileID: 8346662932880129188}
-  memoryManager: {fileID: 7250783013755786887}
   namePlateText: {fileID: 0}
   dialogueText: {fileID: 0}
   clearNarrativeUiOnDialogueEnd: 1
@@ -72,23 +71,6 @@ MonoBehaviour:
       caption: Void - "The feeling after the door slammed. You know the one."
     - overrideSprite: {fileID: -986845694075832296, guid: 6d4dbfd8a00ab9342a3afd97b7ab5db9, type: 3}
       caption: Pain - "It hurts twice as much when they're already broken."
---- !u!114 &7250783013755786887
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7148960285982515476}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 956219125e5625d4f912be58f210704f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MemoryManager
-  startingMemoryPercent: 100
-  maxMemoryPercent: 100
-  memBarFill: {fileID: 0}
-  memBarFillImage: {fileID: 0}
-  memBarLabel: {fileID: 0}
 --- !u!114 &8346662932880129188
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -123,3 +105,27 @@ MonoBehaviour:
   - type: 2
     clip: {fileID: 0}
   musicVolume: 1
+--- !u!114 &-4502867904831994845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7148960285982515476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c889465f1da147c408f729ae60774425, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueUIManager
+  dialogueManager: {fileID: 0}
+  dialoguePanel: {fileID: 0}
+  speakerText: {fileID: 0}
+  dialogueText: {fileID: 0}
+  hidePanelOnStart: 1
+  autoCreateRuntimeUIIfMissing: 1
+  nextLineKey: 20
+  sentencePunctuationPause: 0.08
+  commaPunctuationPause: 0.04
+  typewriterAudioSource: {fileID: 0}
+  typewriterTickClip: {fileID: 0}
+  typewriterTickVolume: 0.35

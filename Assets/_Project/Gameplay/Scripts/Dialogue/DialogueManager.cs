@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class DialogueManager : MonoBehaviour
 {
@@ -29,7 +30,6 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerInteraction playerInteraction;
     [SerializeField] private StateManager stateManager;
-    [SerializeField] private MemoryManager memoryManager;
 
     [Header("Combat Narrative UI")]
     [SerializeField] private TMP_Text namePlateText;
@@ -66,33 +66,32 @@ public class DialogueManager : MonoBehaviour
         }
 
         Instance = this;
+        DontDestroyOnLoad(gameObject);
 
-        if (playerMovement == null)
-        {
-            playerMovement = FindFirstObjectByType<PlayerMovement>();
-        }
-
-        if (playerInteraction == null)
-        {
-            playerInteraction = FindFirstObjectByType<PlayerInteraction>();
-        }
-
-        if (stateManager == null)
-        {
-            stateManager = FindFirstObjectByType<StateManager>();
-        }
-
-        if (memoryManager == null)
-        {
-            memoryManager = FindFirstObjectByType<MemoryManager>();
-        }
-
-        if (cardRewardPresenter == null)
-        {
-            cardRewardPresenter = FindFirstObjectByType<CardRewardPresenter>();
-        }
+        SceneManager.sceneLoaded += HandleSceneLoaded;
+        ResolveSceneReferences();
 
         ResolveNarrativeUiReferences();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+            Instance = null;
+        }
+    }
+
+    private void HandleSceneLoaded(Scene _, LoadSceneMode __)
+    {
+        ResolveSceneReferences();
+        ResolveNarrativeUiReferences();
+
+        if (_isActive)
+        {
+            SetPlayerInputEnabled(false);
+        }
     }
 
     public void StartDialogue(DialogueData dialogueData)
@@ -277,13 +276,6 @@ public class DialogueManager : MonoBehaviour
                 Debug.Log($"Dialogue requested battle start: {eventParam}");
                 yield break;
 
-            case DialogueEvent.UnlockMemoryFragment:
-                if (memoryManager != null && !string.IsNullOrWhiteSpace(eventParam))
-                {
-                    memoryManager.UnlockFragment(eventParam);
-                }
-                yield break;
-
             case DialogueEvent.GiveCard:
                 yield return HandleGiveCardEvent(eventParam);
                 yield break;
@@ -421,12 +413,37 @@ public class DialogueManager : MonoBehaviour
         return null;
     }
 
+    private void ResolveSceneReferences()
+    {
+        if (playerMovement == null)
+        {
+            playerMovement = FindFirstObjectByType<PlayerMovement>();
+        }
+
+        if (playerInteraction == null)
+        {
+            playerInteraction = FindFirstObjectByType<PlayerInteraction>();
+        }
+
+        if (stateManager == null)
+        {
+            stateManager = FindFirstObjectByType<StateManager>();
+        }
+
+        if (cardRewardPresenter == null)
+        {
+            cardRewardPresenter = FindFirstObjectByType<CardRewardPresenter>();
+        }
+    }
+
     private void SetPlayerInputEnabled(bool isEnabled)
     {
         if (!pausePlayerDuringDialogue)
         {
             return;
         }
+
+        ResolveSceneReferences();
 
         playerMovement?.SetMovementEnabled(isEnabled);
         playerInteraction?.SetInteractionEnabled(isEnabled);

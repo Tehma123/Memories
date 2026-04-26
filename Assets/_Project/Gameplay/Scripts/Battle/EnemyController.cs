@@ -22,6 +22,8 @@ public class EnemyController : MonoBehaviour, IDamageable, IPointerClickHandler
     [SerializeField, Min(0f)] private float defeatJitterPixels = 4f;
     [SerializeField] private bool hideEnemyOnDefeat = true;
 
+
+
     private Image _image;
     private Outline _outline;
     private CanvasGroup _canvasGroup;
@@ -40,16 +42,6 @@ public class EnemyController : MonoBehaviour, IDamageable, IPointerClickHandler
 
     private void Awake()
     {
-        if (battleManager == null)
-        {
-            battleManager = FindFirstObjectByType<BattleManager>();
-        }
-
-        if (deckManager == null)
-        {
-            deckManager = FindFirstObjectByType<DeckManager>();
-        }
-
         _image = GetComponent<Image>();
         if (_image != null)
         {
@@ -116,12 +108,13 @@ public class EnemyController : MonoBehaviour, IDamageable, IPointerClickHandler
             return;
         }
 
-        if (deckManager == null)
-        {
-            deckManager = FindFirstObjectByType<DeckManager>();
-        }
-
         deckManager?.HandleEnemyClicked(this);
+    }
+
+    public void SetRuntimeReferences(BattleManager battleManagerReference, DeckManager deckManagerReference)
+    {
+        battleManager = battleManagerReference;
+        deckManager = deckManagerReference;
     }
 
     public void SetTargetSelectionState(bool isTargetable)

@@ -29,6 +29,7 @@ public class BattleManager : MonoBehaviour
     [SerializeField] private EnemyData[] encounterEnemies = Array.Empty<EnemyData>();
     [SerializeField] private bool autoStartEncounterOnStart = true;
     [SerializeField] private Button endTurnButton;
+    [SerializeField] private bool bindEndTurnButtonAtRuntime = true;
     [SerializeField] private bool useFixedSeed;
     [SerializeField] private int fixedSeed;
 
@@ -40,6 +41,7 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Min(0f)] private float enemyActionIntervalSeconds = 0.35f;
 
     [Header("Enemy Attack Feedback")]
+    [SerializeField] private bool useBuiltInEnemyAttackShake = true;
     [SerializeField, Min(0f)] private float enemyAttackShakeDuration = 0.12f;
     [SerializeField, Min(0f)] private float enemyAttackUiShakePixels = 18f;
     [SerializeField] private RectTransform screenShakeTarget;
@@ -98,39 +100,21 @@ public class BattleManager : MonoBehaviour
     public event Action OnCombatRestarted;
     public event Action<string, string> OnCheckpointSaveRequested;
 
+    private void Reset()
+    {
+        AutoAssignReferencesInEditor();
+    }
+
     private void Awake()
     {
-        if (deckManager == null)
-        {
-            deckManager = FindFirstObjectByType<DeckManager>();
-        }
-
-        if (actionQueue == null)
-        {
-            actionQueue = FindFirstObjectByType<ActionQueue>();
-        }
-
-        if (stateManager == null)
-        {
-            stateManager = FindFirstObjectByType<StateManager>();
-        }
-
-        if (memoryManager == null)
-        {
-            memoryManager = FindFirstObjectByType<MemoryManager>();
-        }
-
-        if (endTurnButton == null)
-        {
-            endTurnButton = FindEndTurnButton();
-        }
+        LogMissingRequiredReferences();
     }
 
     private void OnEnable()
     {
-        if (endTurnButton != null)
+        if (bindEndTurnButtonAtRuntime && endTurnButton != null)
         {
-            endTurnButton.onClick.AddListener(HandleEndTurnButtonClicked);
+            endTurnButton.onClick.AddListener(HandleEndTurnButtonClickedFromUI);
         }
     }
 
@@ -159,9 +143,9 @@ public class BattleManager : MonoBehaviour
 
     private void OnDisable()
     {
-        if (endTurnButton != null)
+        if (bindEndTurnButtonAtRuntime && endTurnButton != null)
         {
-            endTurnButton.onClick.RemoveListener(HandleEndTurnButtonClicked);
+            endTurnButton.onClick.RemoveListener(HandleEndTurnButtonClickedFromUI);
         }
 
         if (_turnFlowCoroutine != null)
@@ -660,7 +644,9 @@ public class BattleManager : MonoBehaviour
             Debug.LogWarning($"Enemy '{enemyData.displayName}' has no sprite assigned. Set Enemy Sprite in EnemyData.");
         }
 
-        return enemyObject.AddComponent<EnemyController>();
+        EnemyController controller = enemyObject.AddComponent<EnemyController>();
+        controller.SetRuntimeReferences(this, deckManager);
+        return controller;
     }
 
     private void ResetEncounterState()
@@ -740,7 +726,7 @@ public class BattleManager : MonoBehaviour
         UpdateEndTurnButtonState();
     }
 
-    private void HandleEndTurnButtonClicked()
+    public void HandleEndTurnButtonClickedFromUI()
     {
         EndTurn();
     }
@@ -795,7 +781,8 @@ public class BattleManager : MonoBehaviour
 
     private IEnumerator PlayEnemyAttackFeedbackRoutine()
     {
-        if (enemyAttackShakeDuration <= 0f || enemyAttackUiShakePixels <= 0f)
+
+        if (!useBuiltInEnemyAttackShake || enemyAttackShakeDuration <= 0f || enemyAttackUiShakePixels <= 0f)
         {
             yield break;
         }
@@ -813,6 +800,7 @@ public class BattleManager : MonoBehaviour
         {
             yield return null;
         }
+
     }
 
     private IEnumerator PlayUiShakeRoutine(RectTransform shakeTarget)
@@ -1020,12 +1008,75 @@ public class BattleManager : MonoBehaviour
 
     private void OnValidate()
     {
+        AutoAssignReferencesInEditor();
+
         victorySceneName = (victorySceneName ?? string.Empty).Trim();
         victoryEntryPointId = (victoryEntryPointId ?? string.Empty).Trim();
         checkpointSceneName = (checkpointSceneName ?? string.Empty).Trim();
         checkpointEntryPointId = (checkpointEntryPointId ?? string.Empty).Trim();
         quitToMenuSceneName = (quitToMenuSceneName ?? string.Empty).Trim();
         quitToMenuEntryPointId = (quitToMenuEntryPointId ?? string.Empty).Trim();
+    }
+
+    private void LogMissingRequiredReferences()
+    {
+        if (deckManager == null)
+        {
+            Debug.LogWarning($"{nameof(BattleManager)} on '{name}' is missing {nameof(deckManager)} reference.");
+        }
+
+        if (actionQueue == null)
+        {
+            Debug.LogWarning($"{nameof(BattleManager)} on '{name}' is missing {nameof(actionQueue)} reference.");
+        }
+
+        if (stateManager == null)
+        {
+            Debug.LogWarning($"{nameof(BattleManager)} on '{name}' is missing {nameof(stateManager)} reference.");
+        }
+
+        if (memoryManager == null)
+        {
+            Debug.LogWarning($"{nameof(BattleManager)} on '{name}' is missing {nameof(memoryManager)} reference.");
+        }
+
+        if (bindEndTurnButtonAtRuntime && endTurnButton == null)
+        {
+            Debug.LogWarning($"{nameof(BattleManager)} on '{name}' is missing {nameof(endTurnButton)} reference.");
+        }
+    }
+
+    private void AutoAssignReferencesInEditor()
+    {
+        if (Application.isPlaying)
+        {
+            return;
+        }
+
+        if (deckManager == null)
+        {
+            deckManager = FindFirstObjectByType<DeckManager>(FindObjectsInactive.Include);
+        }
+
+        if (actionQueue == null)
+        {
+            actionQueue = FindFirstObjectByType<ActionQueue>(FindObjectsInactive.Include);
+        }
+
+        if (stateManager == null)
+        {
+            stateManager = FindFirstObjectByType<StateManager>(FindObjectsInactive.Include);
+        }
+
+        if (memoryManager == null)
+        {
+            memoryManager = FindFirstObjectByType<MemoryManager>(FindObjectsInactive.Include);
+        }
+
+        if (bindEndTurnButtonAtRuntime && endTurnButton == null)
+        {
+            endTurnButton = FindEndTurnButton();
+        }
     }
 
     private static Button FindEndTurnButton()
