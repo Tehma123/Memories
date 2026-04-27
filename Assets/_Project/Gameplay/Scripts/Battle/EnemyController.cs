@@ -1,10 +1,9 @@
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using System;
 using System.Collections;
 
-public class EnemyController : MonoBehaviour, IDamageable, IPointerClickHandler
+public class EnemyController : MonoBehaviour, IDamageable
 {
     [SerializeField] private EnemyData enemyData;
     [SerializeField] private int currentHealth;
@@ -99,16 +98,6 @@ public class EnemyController : MonoBehaviour, IDamageable, IPointerClickHandler
 
         StopCoroutine(_defeatPresentationRoutine);
         _defeatPresentationRoutine = null;
-    }
-
-    public void OnPointerClick(PointerEventData eventData)
-    {
-        if (!IsAlive)
-        {
-            return;
-        }
-
-        deckManager?.HandleEnemyClicked(this);
     }
 
     public void SetRuntimeReferences(BattleManager battleManagerReference, DeckManager deckManagerReference)

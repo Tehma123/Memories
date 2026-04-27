@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using System;
 using System.Collections;
@@ -110,14 +111,6 @@ public class BattleManager : MonoBehaviour
         LogMissingRequiredReferences();
     }
 
-    private void OnEnable()
-    {
-        if (bindEndTurnButtonAtRuntime && endTurnButton != null)
-        {
-            endTurnButton.onClick.AddListener(HandleEndTurnButtonClickedFromUI);
-        }
-    }
-
     private void Start()
     {
         UpdateEndTurnButtonState();
@@ -141,13 +134,21 @@ public class BattleManager : MonoBehaviour
         ClearRuntimeEncounterOverride();
     }
 
-    private void OnDisable()
+    private void Update()
     {
-        if (bindEndTurnButtonAtRuntime && endTurnButton != null)
+        if (TryHandleTargetSelectionCancel())
         {
-            endTurnButton.onClick.RemoveListener(HandleEndTurnButtonClickedFromUI);
+            return;
         }
 
+        if (!TryHandleBattlePointerClick())
+        {
+            return;
+        }
+    }
+
+    private void OnDisable()
+    {
         if (_turnFlowCoroutine != null)
         {
             StopCoroutine(_turnFlowCoroutine);
@@ -729,6 +730,111 @@ public class BattleManager : MonoBehaviour
     public void HandleEndTurnButtonClickedFromUI()
     {
         EndTurn();
+    }
+
+    private bool TryHandleBattlePointerClick()
+    {
+        if (!TryGetPrimaryPointerPressedThisFrame(out Vector2 screenPosition))
+        {
+            return false;
+        }
+
+        if (!CanProcessBattleClicks())
+        {
+            return false;
+        }
+
+        if (TryHandleEndTurnButtonClick(screenPosition))
+        {
+            return true;
+        }
+
+        return deckManager != null && deckManager.TryHandleBattleClick(screenPosition);
+    }
+
+    private bool TryHandleTargetSelectionCancel()
+    {
+        if (!CanProcessBattleClicks() || deckManager == null)
+        {
+            return false;
+        }
+
+        bool cancelRequested = false;
+
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            cancelRequested = true;
+        }
+
+        if (!cancelRequested && Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            cancelRequested = true;
+        }
+
+        if (!cancelRequested)
+        {
+            return false;
+        }
+
+        return deckManager.TryCancelPendingTargetSelection();
+    }
+
+    private bool CanProcessBattleClicks()
+    {
+        bool hasDialogueLock = DialogueManager.Instance != null && DialogueManager.Instance.IsDialogueActive;
+        bool hasCardPresentationLock = deckManager != null && deckManager.IsCardPresentationPlaying;
+
+        return _encounterActive
+            && !_isPaused
+            && _context != null
+            && _context.IsPlayerTurn
+            && !_isResolvingQueue
+            && _turnFlowCoroutine == null
+            && !hasDialogueLock
+            && !hasCardPresentationLock
+            && FlowState == CombatFlowState.PlayerTurn;
+    }
+
+    private bool TryHandleEndTurnButtonClick(Vector2 screenPosition)
+    {
+        if (endTurnButton == null || !endTurnButton.gameObject.activeInHierarchy || !endTurnButton.interactable)
+        {
+            return false;
+        }
+
+        RectTransform buttonRect = endTurnButton.transform as RectTransform;
+        if (buttonRect == null)
+        {
+            return false;
+        }
+
+        Canvas canvas = endTurnButton.GetComponentInParent<Canvas>();
+        Camera eventCamera = canvas != null ? canvas.worldCamera : null;
+        if (!RectTransformUtility.RectangleContainsScreenPoint(buttonRect, screenPosition, eventCamera))
+        {
+            return false;
+        }
+
+        HandleEndTurnButtonClickedFromUI();
+        return true;
+    }
+
+    private static bool TryGetPrimaryPointerPressedThisFrame(out Vector2 screenPosition)
+    {
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            screenPosition = Mouse.current.position.ReadValue();
+            return true;
+        }
+
+        if (Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
+        {
+            screenPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+            return true;
+        }
+
+        screenPosition = default;
+        return false;
     }
 
     private void UpdateEndTurnButtonState()

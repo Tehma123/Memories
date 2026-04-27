@@ -199,8 +199,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.56}
   m_AnchorMax: {x: 0.5, y: 0.56}
-  m_AnchoredPosition: {x: 1.6181, y: -57.013}
-  m_SizeDelta: {x: 246.7336, y: 345.39}
+  m_AnchoredPosition: {x: 25.724, y: -139.254}
+  m_SizeDelta: {x: 498.15, y: 674.55}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &91901839
 MonoBehaviour:
@@ -654,8 +654,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.85}
   m_AnchorMax: {x: 0.5, y: 0.85}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 250, y: 50}
+  m_AnchoredPosition: {x: 25.723, y: 8.1987}
+  m_SizeDelta: {x: 498.149, y: 124.39}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &898577204
 MonoBehaviour:
@@ -704,8 +704,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20
-  m_fontSizeBase: 20
+  m_fontSize: 40
+  m_fontSizeBase: 40
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -9912,12 +9912,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.5
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -10184,6 +10184,13 @@ MonoBehaviour:
   rightEdgeX: 10
   rightDestinationSceneName: 
   rightDestinationEntryPointId: Default
+  includeEncounterPayload: 0
+  encounterId: 
+  encounterEnemies: []
+  encounterLevel: 1
+  spawnPattern: 
+  overrideEncounterSeed: 0
+  encounterSeed: 0
 --- !u!1 &2122671689
 GameObject:
   m_ObjectHideFlags: 0
@@ -10268,13 +10275,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 20
-  m_fontSizeBase: 20
+  m_fontSize: 40
+  m_fontSizeBase: 40
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 1
+  m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
@@ -10619,6 +10626,10 @@ PrefabInstance:
     - target: {fileID: 7148960285982515476, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
       propertyPath: m_Name
       value: GameManagers
+      objectReference: {fileID: 0}
+    - target: {fileID: 7148960285982515476, guid: 1d6088dcdc151c44fa206655983e0db0, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

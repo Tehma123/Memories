@@ -6,7 +6,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [SerializeField, Range(0f, 1f)] private float hoverLighten = 0.2f;
     [SerializeField, Range(0f, 1f)] private float armedLighten = 0.35f;
@@ -45,6 +45,7 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     private int _activeScaleTweenId = -1;
 
     public CardData CardData => _cardData;
+    public bool IsInteractable => _isInteractable;
 
     public void Initialize(DeckManager owner, CardData cardData)
     {
@@ -95,7 +96,7 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         ApplyVisualState();
     }
 
-    public void OnPointerClick(PointerEventData eventData)
+    public void HandleClick()
     {
         if (!_isInteractable || _owner == null)
         {
@@ -292,6 +293,8 @@ public class BattleCardView : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         if (_canvasGroup != null)
         {
             _canvasGroup.alpha = _isInteractable ? 1f : Mathf.Clamp01(disabledAlpha);
+            _canvasGroup.interactable = _isInteractable;
+            _canvasGroup.blocksRaycasts = _isInteractable;
         }
 
         if (_rectTransform != null)

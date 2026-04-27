@@ -425,6 +425,48 @@ public class DeckManager : MonoBehaviour
         RefreshSpawnedCardInteractivity();
     }
 
+    public bool TryHandleBattleClick(Vector2 screenPosition)
+    {
+        if (!CanInteractWithCards())
+        {
+            return false;
+        }
+
+        BattleCardView cardView = FindCardViewAtScreenPosition(screenPosition);
+        if (cardView == null)
+        {
+            EnemyController enemy = FindEnemyAtScreenPosition(screenPosition);
+            if (enemy == null || _pendingTargetCardData == null)
+            {
+                return false;
+            }
+
+            HandleEnemyClicked(enemy);
+            return true;
+        }
+
+        cardView.HandleClick();
+        return true;
+    }
+
+    public bool TryCancelPendingTargetSelection()
+    {
+        if (_pendingTargetCardData == null)
+        {
+            return false;
+        }
+
+        if (_armedCardView != null)
+        {
+            _armedCardView.SetArmed(false);
+            _armedCardView = null;
+        }
+
+        ClearPendingEnemyTargetSelection();
+        RefreshSpawnedCardInteractivity();
+        return true;
+    }
+
     public void HandleEnemyClicked(EnemyController enemy)
     {
         if (enemy == null || !enemy.IsAlive)
@@ -972,6 +1014,97 @@ public class DeckManager : MonoBehaviour
             && context.IsPlayerTurn;
     }
 
+    private BattleCardView FindCardViewAtScreenPosition(Vector2 screenPosition)
+    {
+        BattleCardView bestCardView = null;
+        int bestSortKey = int.MinValue;
+
+        for (int i = 0; i < _spawnedHandCards.Count; i++)
+        {
+            GameObject cardObject = _spawnedHandCards[i];
+            if (cardObject == null)
+            {
+                continue;
+            }
+
+            BattleCardView cardView = cardObject.GetComponent<BattleCardView>();
+            if (cardView == null || !cardView.IsInteractable)
+            {
+                continue;
+            }
+
+            RectTransform rectTransform = cardView.transform as RectTransform;
+            if (rectTransform == null)
+            {
+                continue;
+            }
+
+            Canvas canvas = cardView.GetComponentInParent<Canvas>();
+            Camera eventCamera = canvas != null ? canvas.worldCamera : null;
+            if (!RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPosition, eventCamera))
+            {
+                continue;
+            }
+
+            int parentSortIndex = rectTransform.parent != null ? rectTransform.parent.GetSiblingIndex() : rectTransform.GetSiblingIndex();
+            int canvasSortOrder = canvas != null ? canvas.sortingOrder : 0;
+            int sortKey = (canvasSortOrder * 1000) + parentSortIndex;
+            if (sortKey >= bestSortKey)
+            {
+                bestSortKey = sortKey;
+                bestCardView = cardView;
+            }
+        }
+
+        return bestCardView;
+    }
+
+    private EnemyController FindEnemyAtScreenPosition(Vector2 screenPosition)
+    {
+        ResolveRuntimeReferences();
+        if (battleManager == null)
+        {
+            return null;
+        }
+
+        EnemyController bestEnemy = null;
+        int bestSortKey = int.MinValue;
+        IReadOnlyList<EnemyController> enemies = battleManager.ActiveEnemies;
+
+        for (int i = 0; i < enemies.Count; i++)
+        {
+            EnemyController enemy = enemies[i];
+            if (enemy == null || !enemy.IsAlive)
+            {
+                continue;
+            }
+
+            RectTransform rectTransform = enemy.transform as RectTransform;
+            if (rectTransform == null)
+            {
+                continue;
+            }
+
+            Canvas canvas = enemy.GetComponentInParent<Canvas>();
+            Camera eventCamera = canvas != null ? canvas.worldCamera : null;
+            if (!RectTransformUtility.RectangleContainsScreenPoint(rectTransform, screenPosition, eventCamera))
+            {
+                continue;
+            }
+
+            int siblingIndex = rectTransform.GetSiblingIndex();
+            int canvasSortOrder = canvas != null ? canvas.sortingOrder : 0;
+            int sortKey = (canvasSortOrder * 1000) + siblingIndex;
+            if (sortKey >= bestSortKey)
+            {
+                bestSortKey = sortKey;
+                bestEnemy = enemy;
+            }
+        }
+
+        return bestEnemy;
+    }
+
     private void RefreshSpawnedCardInteractivity()
     {
         bool canInteract = CanInteractWithCards();
@@ -1364,6 +1497,7 @@ public class DeckManager : MonoBehaviour
         _suppressHandRebuild = false;
         FlushPendingHandRebuild();
         _playCardPresentationRoutine = null;
+        battleManager?.EndTurnAfterCardPlay();
         battleManager?.RefreshInteractionState();
     }
 

@@ -15,6 +15,9 @@ EditorBuildSettings:
     path: Assets/_Project/Gameplay/Scenes/MemoryShopScene.unity
     guid: e6db8ac34014bdd4c9360bcaabc37164
   - enabled: 1
+    path: Assets/_Project/Gameplay/Scenes/ExplorationAct1.unity
+    guid: bf97bc9328437674bb8d40746aee50de
+  - enabled: 1
     path: Assets/_Project/Gameplay/Scenes/CombatScene.unity
     guid: 6b15f6ccaca56c148b33b00ae2a4f34b
   m_configObjects:
