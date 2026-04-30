@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Unity.Cinemachine;
 
 [DisallowMultipleComponent]
 public class SceneTransitionFader : MonoBehaviour
@@ -125,7 +126,11 @@ public class SceneTransitionFader : MonoBehaviour
             yield return null;
         }
 
-        // Wait one frame for destination scene startup logic before fading back in.
+        yield return null;
+
+        var smoothFollow = FindFirstObjectByType<CameraSmoothFollow>();
+        smoothFollow?.SnapImmediate();
+
         yield return null;
 
         yield return FadeTo(0f, fadeInDuration, keepRaycastBlock: false);

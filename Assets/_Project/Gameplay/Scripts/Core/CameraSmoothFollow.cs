@@ -63,4 +63,25 @@ public class CameraSmoothFollow : MonoBehaviour
                 _followComponent.FollowOffset = offset;
             }).id;
     }
+
+    public void SnapImmediate()
+    {
+        // Cancel any running offset tween
+        if (LeanTween.isTweening(_activeTweenId))
+            LeanTween.cancel(_activeTweenId);
+
+        _lastDirection = 0;
+
+        // Reset offset to center so there's no stale directional lean
+        if (_followComponent != null)
+        {
+            Vector3 offset = _followComponent.FollowOffset;
+            offset.x = 0f;
+            _followComponent.FollowOffset = offset;
+        }
+
+        // Tell Cinemachine to hard-snap on next update instead of interpolating
+        if (vcam != null)
+            vcam.PreviousStateIsValid = false;
+    }
 }
