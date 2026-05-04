@@ -75,7 +75,7 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    public void OnInteract(InputValue value)
+    private void OnInteract(InputValue value)
     {
         if (_playerInteraction != null && _playerInteraction.enabled)
         {
@@ -104,13 +104,11 @@ public class PlayerMovement : MonoBehaviour
 
         if (currentTarget != null)
         {
-            // Chỉ cần gọi Interact(), nó tự chạy code của Shop hoặc Fragment tùy đối tượng
             currentTarget.Interact();
         }
     }
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        // Kiểm tra xem đối tượng va chạm có thực thi IInteractable không
         IInteractable interactable = collision.GetComponent<IInteractable>();
         
         if (interactable != null)

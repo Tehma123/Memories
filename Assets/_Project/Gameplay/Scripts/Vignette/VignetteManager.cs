@@ -16,9 +16,13 @@ public class VignetteManager : MonoBehaviour
 
     public bool IsShowing => _isShowing;
 
+    public VignetteData GetActiveVignette() => _activeVignette;
+
     public event Action<VignetteData> OnVignetteTriggered;
     public event Action<string, int, int> OnVignetteLineShown;
     public event Action<VignetteData> OnVignetteClosed;
+    public event Action OnVignetteFreeze;
+    public event Action OnVignetteUnfreeze;
 
     private void Awake()
     {
@@ -63,6 +67,7 @@ public class VignetteManager : MonoBehaviour
             memoryManager.UnlockFragment(vignetteData.revealMemoryFragment);
         }
 
+        OnVignetteFreeze?.Invoke();
         OnVignetteTriggered?.Invoke(vignetteData);
         DisplayCurrentLine();
     }
@@ -104,6 +109,7 @@ public class VignetteManager : MonoBehaviour
         _currentLineIndex = -1;
         _isShowing = false;
 
+        OnVignetteUnfreeze?.Invoke();
         OnVignetteClosed?.Invoke(closedVignette);
     }
 
