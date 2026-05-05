@@ -3,26 +3,38 @@ using TMPro;
 using System.Collections;
 using UnityEngine.InputSystem;
 
+using Memories.Narrative;
+
 [DisallowMultipleComponent]
 public class VignetteUIPresenter : MonoBehaviour
 {
-    [SerializeField] private Canvas vignetteCanvas;
-    [SerializeField] private TextMeshProUGUI vignetteText;
-    [SerializeField] private CanvasGroup canvasGroup;
+    [SerializeField] private VignettePanelController panelController;
 
     [Header("Effect Settings")]
     [SerializeField] private float typewriterSpeed = 0.05f;
     [SerializeField] private float glitchDuration = 0.15f;
     [SerializeField] private float staticDuration = 0.1f;
 
+    [Header("Audio Settings")]
+    [SerializeField] private AudioSource typewriterAudioSource;
+    [SerializeField] private AudioClip typewriterTickClip;
+    [SerializeField] private float typewriterTickVolume = 1f;
+
     private VignetteManager _vignetteManager;
     private PlayerMovement _playerMovement;
     private Coroutine _displayCoroutine;
     private bool _isLineDisplaying;
 
-    private void Awake()
+    private TMP_Text vignetteText => panelController != null ? panelController.GetTextDisplay() : null;
+
+    private void Start()
     {
         _vignetteManager = VignetteManager.Instance;
+        if (_vignetteManager == null)
+        {
+            _vignetteManager = FindFirstObjectByType<VignetteManager>();
+        }
+
         if (_vignetteManager != null)
         {
             _vignetteManager.OnVignetteTriggered += OnVignetteTriggered;
@@ -32,14 +44,14 @@ public class VignetteUIPresenter : MonoBehaviour
             _vignetteManager.OnVignetteUnfreeze += OnVignetteUnfreeze;
         }
 
-        if (canvasGroup == null)
+        if (panelController == null)
         {
-            canvasGroup = vignetteCanvas.GetComponent<CanvasGroup>();
+            panelController = GetComponent<VignettePanelController>();
         }
 
-        if (vignetteCanvas != null)
+        if (panelController != null)
         {
-            vignetteCanvas.enabled = false;
+            panelController.Hide();
         }
 
         _playerMovement = FindFirstObjectByType<PlayerMovement>();
@@ -88,14 +100,9 @@ public class VignetteUIPresenter : MonoBehaviour
 
     private void OnVignetteTriggered(VignetteData vignetteData)
     {
-        if (vignetteCanvas != null)
+        if (panelController != null)
         {
-            vignetteCanvas.enabled = true;
-        }
-
-        if (canvasGroup != null)
-        {
-            canvasGroup.alpha = 1f;
+            panelController.Show();
         }
     }
 
@@ -125,11 +132,14 @@ public class VignetteUIPresenter : MonoBehaviour
         }
 
         _isLineDisplaying = false;
-        vignetteText.text = "";
-
-        if (vignetteCanvas != null)
+        if (vignetteText != null)
         {
-            vignetteCanvas.enabled = false;
+            vignetteText.text = "";
+        }
+
+        if (panelController != null)
+        {
+            panelController.Hide();
         }
     }
 
@@ -162,6 +172,8 @@ public class VignetteUIPresenter : MonoBehaviour
 
     private void AppendLineToText(string line)
     {
+        if (vignetteText == null) return;
+
         if (vignetteText.text.Length > 0)
         {
             vignetteText.text += "\n\n";
@@ -171,6 +183,8 @@ public class VignetteUIPresenter : MonoBehaviour
 
     private IEnumerator TypewriterEffect(string line, VignetteEffect effects)
     {
+        if (vignetteText == null) yield break;
+
         _isLineDisplaying = true;
         string displayText = vignetteText.text;
         if (displayText.Length > 0)
@@ -183,6 +197,9 @@ public class VignetteUIPresenter : MonoBehaviour
         for (int i = 0; i < line.Length; i++)
         {
             vignetteText.text = baseText + line.Substring(0, i + 1);
+
+            char visibleCharacter = line[i];
+            PlayTypewriterTick(visibleCharacter);
 
             if (effects.HasFlag(VignetteEffect.Glitch) && Random.value < 0.1f)
             {
@@ -243,5 +260,20 @@ public class VignetteUIPresenter : MonoBehaviour
         }
 
         vignetteText.text = originalText;
+    }
+
+    private void PlayTypewriterTick(char visibleCharacter)
+    {
+        if (char.IsWhiteSpace(visibleCharacter))
+        {
+            return;
+        }
+
+        if (typewriterAudioSource == null || typewriterTickClip == null)
+        {
+            return;
+        }
+
+        typewriterAudioSource.PlayOneShot(typewriterTickClip, typewriterTickVolume);
     }
 }
